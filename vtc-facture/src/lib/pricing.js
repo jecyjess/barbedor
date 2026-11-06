@@ -52,7 +52,8 @@ export function majorationReason(date, tarifs = DEFAULT_TARIFS) {
  * - Majoration : appliquée à la prise en charge + kilomètres, jamais aux suppléments aéroport.
  * - Minimum : appliqué sur le total de la course (hors minutes supplémentaires).
  * - Minutes supplémentaires (facture uniquement) : si la durée réelle dépasse la durée
- *   estimée de plus que la tolérance, chaque minute au-delà de la tolérance est facturée.
+ *   estimée de plus que la tolérance, les minutes au-delà sont PROPOSÉES ; elles ne sont
+ *   facturées que si le chauffeur les valide (paramètre supplementTemps, ajustable).
  */
 export function computePrice({
   distanceKm,
@@ -62,6 +63,7 @@ export function computePrice({
   arrivee = "",
   promo = false,
   dureeReelleMin = null,
+  supplementTemps = null, // { minutes, prixMinute?, montant? } — validé par le chauffeur
   tarifs = DEFAULT_TARIFS,
 }) {
   const t = { ...DEFAULT_TARIFS, ...tarifs, supplements: { ...DEFAULT_TARIFS.supplements, ...(tarifs?.supplements || {}) } };
@@ -97,18 +99,26 @@ export function computePrice({
     course = t.minimum;
   }
 
+  // Le temps supplémentaire n'est jamais ajouté automatiquement : il est seulement
+  // proposé (minutesSupProposees). Le chauffeur le valide et l'ajuste via `supplementTemps`.
   const estimated = Math.round(Number(durationMin) || 0);
-  let minutesSup = 0;
+  let minutesSupProposees = 0;
   if (dureeReelleMin != null && dureeReelleMin !== "") {
     const depassement = Math.round(Number(dureeReelleMin)) - estimated;
-    if (depassement > t.toleranceMin) minutesSup = depassement - t.toleranceMin;
+    if (depassement > t.toleranceMin) minutesSupProposees = depassement - t.toleranceMin;
   }
-  if (minutesSup > 0) {
-    lines.push({
-      code: "minsup",
-      label: `Temps supplémentaire ${minutesSup} min × ${t.prixMinuteSup.toFixed(2).replace(".", ",")} €`,
-      amount: round2(minutesSup * t.prixMinuteSup),
-    });
+  let minutesSup = 0;
+  if (supplementTemps) {
+    minutesSup = Math.max(0, Math.round(Number(supplementTemps.minutes) || 0));
+    const pm = supplementTemps.prixMinute ?? t.prixMinuteSup;
+    const montant = supplementTemps.montant != null && supplementTemps.montant !== "" ? Number(supplementTemps.montant) : minutesSup * pm;
+    if (montant > 0) {
+      lines.push({
+        code: "minsup",
+        label: minutesSup > 0 ? `Temps supplémentaire ${minutesSup} min` : "Temps supplémentaire",
+        amount: round2(montant),
+      });
+    }
   }
 
   const ttc = round2(lines.reduce((s, l) => s + l.amount, 0));
@@ -123,6 +133,7 @@ export function computePrice({
     tauxTva: t.tva,
     majoration: reason,
     minutesSup,
+    minutesSupProposees,
     dureeEstimeeMin: estimated,
     seuilMinutesSup: estimated + t.toleranceMin,
     prixMinuteSup: t.prixMinuteSup,

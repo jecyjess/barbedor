@@ -22,7 +22,7 @@ Application mobile (web installable) pour chauffeur VTC en Île-de-France :
 | Majoration nuit (21 h – 6 h), week-end, jours fériés | + 20 % sur prise en charge + km |
 | Suppléments aéroport (non majorés) | Orly + 10 €, CDG + 5 €, Beauvais + 15 € |
 | Prix minimum | 15 € |
-| Temps supplémentaire | 0,30 €/min au-delà de la durée estimée + 5 min de tolérance |
+| Temps supplémentaire | 0,30 €/min au-delà de la durée estimée + 5 min de tolérance — proposé, ajouté seulement si vous le validez, montant ajustable |
 | TVA | 10 % incluse |
 
 ## Développement

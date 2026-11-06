@@ -18,7 +18,7 @@ export default function CourseDetail({ course, settings, onUpdate, onDelete, onB
     return () => url && URL.revokeObjectURL(url);
   }, [course.audioId]);
 
-  const preview = computePrice({
+  const priceArgs = {
     distanceKm: course.route.distanceKm,
     durationMin: course.route.durationMin,
     date: new Date(course.datetime),
@@ -27,13 +27,31 @@ export default function CourseDetail({ course, settings, onUpdate, onDelete, onB
     promo: course.promo,
     dureeReelleMin: duree,
     tarifs: settings.tarifs,
+  };
+  const proposal = computePrice(priceArgs).minutesSupProposees;
+
+  // Supplément de temps : proposé, jamais ajouté sans votre validation.
+  const [supOn, setSupOn] = useState(false);
+  const [supMin, setSupMin] = useState(0);
+  const [supPrix, setSupPrix] = useState(settings.tarifs.prixMinuteSup);
+  const [supMontant, setSupMontant] = useState(""); // vide = minutes × prix
+  useEffect(() => {
+    setSupMin(proposal);
+    setSupMontant("");
+    if (!proposal) setSupOn(false);
+  }, [proposal]);
+
+  const preview = computePrice({
+    ...priceArgs,
+    supplementTemps: supOn ? { minutes: supMin, prixMinute: Number(supPrix) || 0, montant: supMontant } : null,
   });
+  const montantCalcule = Math.round((Number(supMin) || 0) * (Number(supPrix) || 0) * 100) / 100;
 
   function facturer() {
     const now = new Date().toISOString();
     onUpdate({
       ...course,
-      facture: { numero: nextNumber("F"), date: now, price: preview, dureeReelleMin: +duree, paiement: paiement || null, datePaiement: paiement ? now : null },
+      facture: { numero: nextNumber("F"), date: now, price: preview, dureeReelleMin: +duree, supplementValide: supOn, paiement: paiement || null, datePaiement: paiement ? now : null },
     });
     setShowFact(false);
     setTab("facture");
@@ -95,8 +113,25 @@ export default function CourseDetail({ course, settings, onUpdate, onDelete, onB
               </div>
               <div className="hint">
                 Estimée : {preview.dureeEstimeeMin} min · tolérance {preview.toleranceMin} min
-                {preview.minutesSup > 0 ? ` · ${preview.minutesSup} min facturées en plus` : " · pas de supplément"}
+                {!proposal && " · pas de dépassement"}
               </div>
+
+              {proposal > 0 && (
+                <div className={`extra ${supOn ? "on" : ""}`}>
+                  <label className="switch small">
+                    <input type="checkbox" checked={supOn} onChange={(e) => setSupOn(e.target.checked)} />
+                    <span />
+                    <em>+{proposal} min · {euro(proposal * settings.tarifs.prixMinuteSup)}</em>
+                  </label>
+                  {supOn && (
+                    <div className="row three">
+                      <label>Minutes<input type="number" inputMode="numeric" min="0" value={supMin} onChange={(e) => { setSupMin(e.target.value); setSupMontant(""); }} /></label>
+                      <label>€ / min<input type="number" inputMode="decimal" step="0.05" min="0" value={supPrix} onChange={(e) => { setSupPrix(e.target.value); setSupMontant(""); }} /></label>
+                      <label>Montant €<input type="number" inputMode="decimal" step="0.5" min="0" value={supMontant === "" ? montantCalcule : supMontant} onChange={(e) => setSupMontant(e.target.value)} /></label>
+                    </div>
+                  )}
+                </div>
+              )}
               <div className="quote-total small">{euro(preview.ttc)} TTC</div>
               <div className="row">
                 <button className="btn" onClick={() => setShowFact(false)}>Annuler</button>

@@ -40,12 +40,19 @@ describe("computePrice", () => {
     expect(computePrice({ distanceKm: 90, durationMin: 80, date: jour, arrivee: "Aéroport de Beauvais-Tillé" }).ttc).toBe(155);
   });
 
-  it("minutes supplémentaires au-delà de la tolérance de 5 min", () => {
+  it("temps supplémentaire : proposé, jamais facturé sans validation", () => {
     const base = { distanceKm: 20, durationMin: 30, date: jour };
-    expect(computePrice({ ...base, dureeReelleMin: 35 }).ttc).toBe(35); // dans la tolérance
-    const p = computePrice({ ...base, dureeReelleMin: 45 }); // 15 min de dépassement → 10 facturées
-    expect(p.minutesSup).toBe(10);
-    expect(p.ttc).toBe(38);
+    expect(computePrice({ ...base, dureeReelleMin: 35 }).minutesSupProposees).toBe(0); // dans la tolérance
+    const p = computePrice({ ...base, dureeReelleMin: 45 }); // 15 min de dépassement → 10 proposées
+    expect(p.minutesSupProposees).toBe(10);
+    expect(p.ttc).toBe(35); // rien d'ajouté sans validation
+  });
+
+  it("temps supplémentaire validé et ajustable par le chauffeur", () => {
+    const base = { distanceKm: 20, durationMin: 30, date: jour, dureeReelleMin: 45 };
+    expect(computePrice({ ...base, supplementTemps: { minutes: 10 } }).ttc).toBe(38); // 10 × 0,30
+    expect(computePrice({ ...base, supplementTemps: { minutes: 6, prixMinute: 0.5 } }).ttc).toBe(38);
+    expect(computePrice({ ...base, supplementTemps: { minutes: 10, montant: 2 } }).ttc).toBe(37); // montant ajusté
   });
 
   it("TVA 10 % incluse dans le TTC", () => {
