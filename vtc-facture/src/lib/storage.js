@@ -16,7 +16,7 @@ export const DEFAULT_SETTINGS = {
     siret: "928 978 279 00018",
     rcs: "928 978 279 R.C.S. Bobigny",
     tvaIntra: "FR10928978279",
-    evtc: "", // n° d'inscription au registre VTC de l'exploitant (Stairling Union)
+    evtc: "EVTC075240710", // n° d'inscription au registre VTC de l'exploitant (Stairling Union)
     carteVtc: "", // carte professionnelle du chauffeur — saisie dans Réglages, reste sur l'appareil
     telephone: "+33 7 67 54 04 38",
     email: "lanzojessie@gmail.com",
