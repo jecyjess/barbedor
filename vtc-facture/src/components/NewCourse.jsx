@@ -191,7 +191,7 @@ export default function NewCourse({ settings, onCreated }) {
             ))}
           </ul>
           <div className="hint">
-            Source : {route.source}. Au-delà de {price.seuilMinutesSup} min, {euro(price.prixMinuteSup)} par minute supplémentaire (à valider en fin de course).
+            Source : {route.source}. Au-delà de {price.seuilMinutesSup} min, {euro(price.prixMinuteSup)} par minute supplémentaire (modifiable en fin de course).
           </div>
           <button className="btn gold wide big" onClick={createDevis}>Créer le devis</button>
         </section>

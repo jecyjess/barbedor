@@ -30,7 +30,7 @@ export default function CourseDetail({ course, settings, onUpdate, onDelete, onB
   };
   const proposal = computePrice(priceArgs).minutesSupProposees;
 
-  // Supplément de temps : proposé, jamais ajouté sans votre validation.
+  // Supplément de temps : appliqué automatiquement en cas de dépassement ; le chauffeur peut l'enlever ou le modifier.
   const [supOn, setSupOn] = useState(false);
   const [supMin, setSupMin] = useState(0);
   const [supPrix, setSupPrix] = useState(settings.tarifs.prixMinuteSup);
@@ -39,7 +39,8 @@ export default function CourseDetail({ course, settings, onUpdate, onDelete, onB
   useEffect(() => {
     setSupMin(proposal);
     setSupMontant("");
-    if (!proposal) setSupOn(false);
+    setSupOn(proposal > 0); // dépassement appliqué par défaut, le chauffeur peut l'enlever
+    setSupEdit(false);
   }, [proposal]);
 
   const preview = computePrice({

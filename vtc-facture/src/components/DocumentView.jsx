@@ -79,7 +79,7 @@ export default function DocumentView({ course, settings, type }) {
         <section className="doc-notes">
           <p>
             <b>Durée estimée : {q.dureeEstimeeMin} min</b>, selon le trafic prévu à l'heure de la course. Une tolérance de {q.toleranceMin} min est
-            incluse. Au-delà de {q.seuilMinutesSup} min de trajet, chaque minute supplémentaire pourra être facturée {euro(q.prixMinuteSup)} TTC.
+            incluse. Au-delà de {q.seuilMinutesSup} min de trajet, chaque minute supplémentaire sera facturée {euro(q.prixMinuteSup)} TTC.
           </p>
           <p>Devis gratuit. Prix TTC, TVA {q.tauxTva} % incluse.</p>
           <div className="sign">Bon pour accord — date et signature du client :</div>
