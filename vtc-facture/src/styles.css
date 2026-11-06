@@ -210,3 +210,6 @@ label { display: flex; flex-direction: column; gap: 6px; font-size: 13px; color:
 .switch.small em { font-style: normal; font-variant-numeric: tabular-nums; }
 .extra .row.three label { font-size: 12px; }
 .extra input { padding: 10px; }
+.extra-fixed { display: flex; justify-content: space-between; align-items: center; gap: 10px; font-size: 14px; color: var(--muted); }
+.extra-fixed b { color: var(--text); font-variant-numeric: tabular-nums; }
+.link { background: none; border: 0; color: var(--gold2); font: 500 13px var(--font); cursor: pointer; padding: 4px 0; text-decoration: underline; text-underline-offset: 3px; }

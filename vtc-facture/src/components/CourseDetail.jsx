@@ -35,6 +35,7 @@ export default function CourseDetail({ course, settings, onUpdate, onDelete, onB
   const [supMin, setSupMin] = useState(0);
   const [supPrix, setSupPrix] = useState(settings.tarifs.prixMinuteSup);
   const [supMontant, setSupMontant] = useState(""); // vide = minutes × prix
+  const [supEdit, setSupEdit] = useState(false); // montant fixe par défaut, modifiable sur demande
   useEffect(() => {
     setSupMin(proposal);
     setSupMontant("");
@@ -116,14 +117,27 @@ export default function CourseDetail({ course, settings, onUpdate, onDelete, onB
                 {!proposal && " · pas de dépassement"}
               </div>
 
-              {proposal > 0 && (
+              {(
                 <div className={`extra ${supOn ? "on" : ""}`}>
                   <label className="switch small">
-                    <input type="checkbox" checked={supOn} onChange={(e) => setSupOn(e.target.checked)} />
+                    <input
+                      type="checkbox"
+                      checked={supOn}
+                      onChange={(e) => {
+                        setSupOn(e.target.checked);
+                        setSupEdit(e.target.checked && !proposal); // rien de proposé : saisie directe
+                      }}
+                    />
                     <span />
-                    <em>+{proposal} min · {euro(proposal * settings.tarifs.prixMinuteSup)}</em>
+                    <em>{proposal > 0 ? `+${proposal} min · ${euro(proposal * settings.tarifs.prixMinuteSup)}` : "Ajouter du temps supplémentaire"}</em>
                   </label>
-                  {supOn && (
+                  {supOn && !supEdit && (
+                    <div className="extra-fixed">
+                      <span>{supMin} min × {euro(supPrix)} = <b>{euro(supMontant === "" ? montantCalcule : supMontant)}</b></span>
+                      <button type="button" className="link" onClick={() => setSupEdit(true)}>Modifier</button>
+                    </div>
+                  )}
+                  {supOn && supEdit && (
                     <div className="row three">
                       <label>Minutes<input type="number" inputMode="numeric" min="0" value={supMin} onChange={(e) => { setSupMin(e.target.value); setSupMontant(""); }} /></label>
                       <label>€ / min<input type="number" inputMode="decimal" step="0.05" min="0" value={supPrix} onChange={(e) => { setSupPrix(e.target.value); setSupMontant(""); }} /></label>
