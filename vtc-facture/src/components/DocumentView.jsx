@@ -22,6 +22,7 @@ export default function DocumentView({ course, settings, type }) {
             <div className="doc-company">{e.marque || e.nom}</div>
             {e.chauffeur && <div className="strong">{e.chauffeur}</div>}
             {e.statutChauffeur && <div>{e.statutChauffeur}</div>}
+            {e.carteVtc && <div>Carte professionnelle VTC n° {e.carteVtc}</div>}
             {e.telephone && <div>Tél. {e.telephone}</div>}
             {e.email && <div>{e.email}</div>}
             {e.marque && (

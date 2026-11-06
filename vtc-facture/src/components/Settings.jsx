@@ -42,6 +42,7 @@ export default function Settings({ settings, onSave }) {
         <Field label="Préfixe des numéros" hint="ex. F-HOLAM-2026-11-001"><input value={s.entreprise.prefixe} onChange={ent("prefixe")} /></Field>
         <Field label="Chauffeur"><input value={s.entreprise.chauffeur} onChange={ent("chauffeur")} /></Field>
         <Field label="Statut"><input value={s.entreprise.statutChauffeur} onChange={ent("statutChauffeur")} /></Field>
+        <Field label="N° de carte professionnelle VTC"><input value={s.entreprise.carteVtc} onChange={ent("carteVtc")} /></Field>
         <div className="row">
           <Field label="Téléphone"><input value={s.entreprise.telephone} onChange={ent("telephone")} /></Field>
           <Field label="E-mail"><input value={s.entreprise.email} onChange={ent("email")} /></Field>
@@ -64,7 +65,7 @@ export default function Settings({ settings, onSave }) {
           <Field label="N° TVA intracom."><input value={s.entreprise.tvaIntra} onChange={ent("tvaIntra")} /></Field>
         </div>
         <Field label="RCS"><input value={s.entreprise.rcs} onChange={ent("rcs")} /></Field>
-        <Field label="N° d'inscription au registre VTC"><input value={s.entreprise.evtc} onChange={ent("evtc")} /></Field>
+        <Field label="N° d'inscription au registre VTC (exploitant)" hint="Numéro EVTC de Stairling Union"><input value={s.entreprise.evtc} onChange={ent("evtc")} /></Field>
         <Field label="IBAN (factures non réglées)"><input value={s.entreprise.iban} onChange={ent("iban")} /></Field>
       </section>
 
