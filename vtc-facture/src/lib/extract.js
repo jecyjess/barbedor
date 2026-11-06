@@ -13,9 +13,11 @@ const SCHEMA = {
     heure: { type: "string", description: "Heure de prise en charge au format HH:MM (24 h). Vide si non dite." },
     passagers: { type: "integer" },
     bagages: { type: "integer" },
+    distance_km: { type: "number", description: "Distance si elle est dite (km), sinon 0" },
+    duree_min: { type: "integer", description: "Durée du trajet si elle est dite (minutes), sinon 0" },
     notes: { type: "string", description: "Autres informations utiles (numéro de vol, siège enfant, etc.)" },
   },
-  required: ["client_nom", "client_telephone", "client_email", "depart", "arrivee", "date", "heure", "passagers", "bagages", "notes"],
+  required: ["client_nom", "client_telephone", "client_email", "depart", "arrivee", "date", "heure", "passagers", "bagages", "distance_km", "duree_min", "notes"],
   additionalProperties: false,
 };
 
@@ -61,7 +63,7 @@ const JOURS = ["dimanche", "lundi", "mardi", "mercredi", "jeudi", "vendredi", "s
 /** Analyse locale, sans IA : repère les tournures les plus courantes. */
 export function extractLocal(transcript, now = new Date()) {
   const t = " " + transcript.replace(/\s+/g, " ") + " ";
-  const out = { client_nom: "", client_telephone: "", client_email: "", depart: "", arrivee: "", date: "", heure: "", passagers: 0, bagages: 0, notes: "" };
+  const out = { client_nom: "", client_telephone: "", client_email: "", depart: "", arrivee: "", date: "", heure: "", passagers: 0, bagages: 0, distance_km: 0, duree_min: 0, notes: "" };
 
   const nom = t.match(/\b(monsieur|madame|mademoiselle|m\.|mme)\s+([A-ZÀ-Ý][\wÀ-ÿ'-]+(?:\s+[A-ZÀ-Ý][\wÀ-ÿ'-]+)?)/i);
   if (nom) out.client_nom = `${nom[1][0].toUpperCase()}${nom[1].slice(1).toLowerCase()} ${nom[2]}`;
@@ -71,13 +73,50 @@ export function extractLocal(transcript, now = new Date()) {
   const mail = t.match(/[\w.+-]+@[\w-]+\.[\w.]+/);
   if (mail) out.client_email = mail[0];
 
-  const trajet = t.match(/\b(?:du|de|depuis)\s+(.+?)\s+(?:à|a|au|aux|vers|jusqu'?à|pour)\s+(?:l'|la\s+|le\s+)?(.+?)(?=[,.;!?]| demain| aujourd| ce soir| le \d| lundi| mardi| mercredi| jeudi| vendredi| samedi| dimanche| à \d| a \d| vers \d| pour \d| \d{1,2} ?h|$)/i);
-  if (trajet) {
-    out.depart = trajet[1].trim();
-    out.arrivee = trajet[2].trim();
+  // Fin d'un lieu : ponctuation, ou un mot qui annonce autre chose (date, heure, distance…)
+  const STOP = String.raw`(?=[,.;!?]|\s(?:demain|après-demain|aujourd|ce soir|ce matin|cet après|le \d|lundi|mardi|mercredi|jeudi|vendredi|samedi|dimanche|à \d|a \d|vers \d|pour \d|\d{1,3}\s?(?:h\b|heures?|km|kilo|min)|il y a|apparemment|avec|ça fait|ca fait|environ|en passant|et (?:il|elle|on|ça|ca|c'est)|soit)\b|$)`;
+  const ART = String.raw`(?:à\s+|au\s+|aux\s+|a\s+|en\s+|chez\s+)?`;
+  const tries = [
+    // « chercher Mme Leroy à la gare du Nord direction Roissy »
+    new RegExp(String.raw`\b(?:chercher|récupérer|prendre|prise en charge)\s+(?:[^,.]*?\s)?(?:à|au|aux)\s+(.+?)\s+(?:pour aller|pour se rendre|direction|à destination de|jusqu'(?:à|au|aux)|vers|pour)\s+` + ART + String.raw`(.+?)` + STOP, "i"),
+    // « de Vaujours pour aller à Bobigny », « du 12 rue X jusqu'à Orly »
+    new RegExp(String.raw`\b(?:(?:de|du|des|depuis)\s+|d')(.+?)\s+(?:pour aller|pour se rendre|pour rejoindre|et aller|et va|direction|à destination de|jusqu'(?:à|au|aux))\s+` + ART + String.raw`(.+?)` + STOP, "i"),
+    // « de X à Y », « de X vers Y »
+    new RegExp(String.raw`\b(?:(?:de|du|depuis)\s+|d')(.+?)\s+(?:à|a|au|aux|vers|pour)\s+(?:l'|la\s+|le\s+)?(.+?)` + STOP, "i"),
+  ];
+  for (const re of tries) {
+    const m = t.match(re);
+    if (m && m[1].trim().length > 1 && m[2].trim().length > 1) {
+      out.depart = m[1].trim();
+      out.arrivee = m[2].trim();
+      break;
+    }
   }
-  out.depart = out.depart.replace(/hors ?lit/gi, "Orly");
-  out.arrivee = out.arrivee.replace(/hors ?lit/gi, "Orly");
+  if (!out.depart) {
+    const m = t.match(new RegExp(String.raw`\b(?:parti[es]?|part|partir|départ|prise en charge|chercher|récupérer)\s+(?:de|du|des|d'|depuis|à|au)\s*(.+?)` + STOP, "i"));
+    if (m) out.depart = m[1].trim();
+  }
+  if (!out.arrivee) {
+    const m = t.match(new RegExp(String.raw`\b(?:aller|va|direction|destination|déposer|déposé|arrivée)\s+` + ART + String.raw`(.+?)` + STOP, "i"));
+    if (m) out.arrivee = m[1].trim();
+  }
+  const fix = (x) => x.replace(/hors ?lit/gi, "Orly").replace(/\s+(?:et|puis)$/i, "").trim();
+  out.depart = fix(out.depart);
+  out.arrivee = fix(out.arrivee);
+
+  // Nom sans civilité : « mon père, Jean-Michel », « le client s'appelle Martin »
+  if (!out.client_nom) {
+    const NOM = String.raw`([A-ZÀ-Ý][a-zà-ÿ]+(?:[- ][A-ZÀ-Ý][a-zà-ÿ]+)?)`;
+    const rel = t.match(new RegExp(String.raw`\b(?:[Mm]on|[Mm]a)\s+(père|mère|frère|sœur|soeur|oncle|tante|ami|amie|cousin|cousine|fils|fille|femme|mari|voisin|voisine)\s*,?\s*` + NOM + "?"));
+    const dit = t.match(new RegExp(String.raw`\b(?:client|cliente|s'appelle|appelé|appelée|nommé|nommée|nom est|c'est pour)\s*:?\s*` + NOM));
+    if (dit) out.client_nom = dit[1];
+    else if (rel) out.client_nom = rel[2] ? `${rel[2]} (${rel[1]})` : "";
+  }
+
+  const km = t.match(/\b(\d{1,4}(?:[.,]\d)?)\s?(?:km|kilomètres?|kilos?)\b/i);
+  if (km) out.distance_km = Number(km[1].replace(",", "."));
+  const mn = t.match(/\b(\d{1,3})\s?(?:minutes?|min|mn)\b/i);
+  if (mn) out.duree_min = Number(mn[1]);
 
   const d = new Date(now);
   let dateSet = false;
@@ -97,7 +136,8 @@ export function extractLocal(transcript, now = new Date()) {
   if (h && +h[1] < 24) {
     let hh = +h[1];
     if (/du soir|de l'après-midi/i.test(t) && hh < 12) hh += 12;
-    out.heure = `${pad(hh)}:${pad(h[2] ? +h[2] : 0)}`;
+    const mins = h[2] ? +h[2] : /^\s?(?:h|heures?)\s?et demie/i.test(t.slice(h.index + h[1].length)) ? 30 : /^\s?(?:h|heures?)\s?et quart/i.test(t.slice(h.index + h[1].length)) ? 15 : 0;
+    out.heure = `${pad(hh)}:${pad(mins)}`;
   }
 
   const pax = t.match(/\b(\d|un|une|deux|trois|quatre|cinq|six|sept|huit)\s+(?:passagers?|personnes?)/i);

@@ -215,3 +215,5 @@ label { display: flex; flex-direction: column; gap: 6px; font-size: 13px; color:
 .link { background: none; border: 0; color: var(--gold2); font: 500 13px var(--font); cursor: pointer; padding: 4px 0; text-decoration: underline; text-underline-offset: 3px; }
 .doc-issuer { margin-top: 8px; padding-top: 8px; border-top: 1px solid #ecebe6; color: #55575e; font-size: 12px; }
 .doc-issuer b { color: #1c1d21; }
+.quote-bottom { display: flex; justify-content: space-between; align-items: flex-end; padding-top: 4px; }
+.quote-bottom .muted { font-size: 13px; line-height: 1.4; }

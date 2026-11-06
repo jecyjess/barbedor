@@ -62,13 +62,25 @@ export default function NewCourse({ settings, onCreated }) {
   );
 
   // Toute modification d'adresse invalide l'itinéraire calculé.
-  useEffect(() => setRoute(null), [f.depart, f.arrivee]);
+  // (sauf si la dictée a donné la distance / la durée : on les reprend).
+  const dictated = useRef(null);
+  useEffect(() => {
+    setRoute(dictated.current);
+    dictated.current = null;
+  }, [f.depart, f.arrivee]);
 
   async function analyse() {
     if (!transcript.trim()) return;
     setBusy("analyse");
     setMsg(null);
     const { data, engine, error } = await extractCourse(transcript, settings.anthropicKey);
+    if (data.distance_km > 0) {
+      dictated.current = { distanceKm: data.distance_km, durationMin: data.duree_min || "", source: "dictée", origin: data.depart || f.depart, destination: data.arrivee || f.arrivee };
+      if ((data.depart || f.depart) === f.depart && (data.arrivee || f.arrivee) === f.arrivee) {
+        setRoute(dictated.current);
+        dictated.current = null;
+      }
+    }
     setF((s) => ({
       ...s,
       nom: data.client_nom || s.nom,
@@ -92,9 +104,14 @@ export default function NewCourse({ settings, onCreated }) {
     try {
       setRoute(await computeRoute({ origin: f.depart, destination: f.arrivee, date: datetime, googleKey: settings.googleMapsKey }));
     } catch (e) {
-      setMsg({ kind: "warn", text: e.message });
+      setMsg({ kind: "warn", text: `${e.message} — saisissez la distance et la durée à la main.` });
+      manual();
     }
     setBusy("");
+  }
+
+  function manual() {
+    setRoute({ distanceKm: "", durationMin: "", source: "", origin: f.depart, destination: f.arrivee });
   }
 
   async function createDevis() {
@@ -112,7 +129,8 @@ export default function NewCourse({ settings, onCreated }) {
       depart: f.depart, arrivee: f.arrivee,
       datetime: datetime.toISOString(),
       passagers: +f.passagers || 0, bagages: +f.bagages || 0, notes: f.notes,
-      promo: f.promo, transcript, audioId, route,
+      promo: f.promo, transcript, audioId,
+      route: { ...route, distanceKm: Number(route.distanceKm) || 0, durationMin: Math.round(Number(route.durationMin) || 0), source: route.source || "saisie manuelle" },
       devis: { numero: nextNumber("D", settings.entreprise.prefixe), date: now, price },
       facture: null,
     });
@@ -149,10 +167,6 @@ export default function NewCourse({ settings, onCreated }) {
           <label>Passagers<input type="number" min="0" inputMode="numeric" value={f.passagers} onChange={set("passagers")} /></label>
           <label>Bagages<input type="number" min="0" inputMode="numeric" value={f.bagages} onChange={set("bagages")} /></label>
         </div>
-        <label className="switch">
-          <input type="checkbox" checked={f.promo} onChange={set("promo")} />
-          <span />Tarif promotion ({String(settings.tarifs.prixKmPromo).replace(".", ",")} €/km)
-        </label>
       </section>
 
       <section className="card">
@@ -169,31 +183,41 @@ export default function NewCourse({ settings, onCreated }) {
         {busy === "route" ? "Calcul de l'itinéraire…" : route ? "Recalculer le trajet" : "Calculer le trajet et le prix"}
       </button>
 
+      {!route && f.depart && f.arrivee && !busy && (
+        <button className="btn ghost wide" onClick={manual}>Saisir la distance et la durée à la main</button>
+      )}
+
       {route && price && (
         <section className="card quote">
-          <div className="quote-top">
-            <div>
-              <div className="quote-total">{euro(price.ttc)}</div>
-              <div className="muted">TTC · dont TVA {euro(price.tva)}</div>
-            </div>
-            <div className="quote-meta">
-              <div><b>{route.distanceKm}</b> km</div>
-              <div>≈ <b>{route.durationMin}</b> min</div>
-            </div>
-          </div>
+          <div className="card-title">Ajuster la course</div>
           <div className="row">
-            <label>Distance (km)<input type="number" step="0.1" value={route.distanceKm} onChange={(e) => setRoute({ ...route, distanceKm: +e.target.value })} /></label>
-            <label>Durée (min)<input type="number" value={route.durationMin} onChange={(e) => setRoute({ ...route, durationMin: +e.target.value })} /></label>
+            <label>Distance (km)
+              <input type="number" inputMode="decimal" step="0.1" min="0" value={route.distanceKm} onChange={(e) => setRoute({ ...route, distanceKm: e.target.value })} />
+            </label>
+            <label>Durée estimée (min)
+              <input type="number" inputMode="numeric" min="0" value={route.durationMin} onChange={(e) => setRoute({ ...route, durationMin: e.target.value })} />
+            </label>
           </div>
+          <label className="switch">
+            <input type="checkbox" checked={f.promo} onChange={set("promo")} />
+            <span />Tarif promotion ({String(settings.tarifs.prixKmPromo).replace(".", ",")} €/km)
+          </label>
+          <div className="hint">
+            Le prix suit la distance. La durée sert au devis et au calcul du dépassement :
+            au-delà de {price.seuilMinutesSup} min, {euro(price.prixMinuteSup)} par minute (modifiable en fin de course).
+            {route.source ? ` Source : ${route.source}.` : ""}
+          </div>
+
           <ul className="lines">
             {price.lines.map((l) => (
               <li key={l.code}><span>{l.label}</span><span>{euro(l.amount)}</span></li>
             ))}
           </ul>
-          <div className="hint">
-            Source : {route.source}. Au-delà de {price.seuilMinutesSup} min, {euro(price.prixMinuteSup)} par minute supplémentaire (modifiable en fin de course).
+          <div className="quote-bottom">
+            <div className="muted">Total TTC<br />dont TVA {euro(price.tva)}</div>
+            <div className="quote-total">{euro(price.ttc)}</div>
           </div>
-          <button className="btn gold wide big" onClick={createDevis}>Créer le devis</button>
+          <button className="btn gold wide big" disabled={!Number(route.distanceKm)} onClick={createDevis}>Créer le devis</button>
         </section>
       )}
     </div>

@@ -22,3 +22,21 @@ describe("extractLocal", () => {
     expect(r.heure).toBe("18:00");
   });
 });
+
+describe("extractLocal — parole naturelle", () => {
+  it("« mon père, Jean-Michel, est parti de Vaujours pour aller à Bobigny »", () => {
+    const r = extractLocal("Mon père, Jean-Michel, est parti de Vaujours pour aller à Bobigny. Apparemment il y a 48 km et 48 minutes", now);
+    expect(r.client_nom).toBe("Jean-Michel (père)");
+    expect(r.depart).toBe("Vaujours");
+    expect(r.arrivee).toBe("Bobigny");
+    expect(r.distance_km).toBe(48);
+    expect(r.duree_min).toBe(48);
+  });
+  it("« je dois chercher madame Leroy à la gare du Nord, direction Roissy, à 9 heures et demie »", () => {
+    const r = extractLocal("Je dois chercher madame Leroy à la gare du Nord direction Roissy à 9 heures et demie", now);
+    expect(r.client_nom).toBe("Madame Leroy");
+    expect(r.depart).toBe("la gare du Nord");
+    expect(r.arrivee).toMatch(/Roissy/);
+    expect(r.heure).toBe("09:30");
+  });
+});
