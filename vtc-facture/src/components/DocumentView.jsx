@@ -17,13 +17,25 @@ export default function DocumentView({ course, settings, type }) {
     <article className="doc" id="printable">
       <header className="doc-head">
         <div className="doc-brand">
-          {e.logo ? <img src={e.logo} alt="" className="doc-logo" /> : <div className="doc-mono">{(e.nom || "V").slice(0, 1)}</div>}
+          {e.logo ? <img src={e.logo} alt="" className="doc-logo" /> : <div className="doc-mono">{(e.marque || e.nom || "V").replace(/^groupe\s+/i, "").slice(0, 1)}</div>}
           <div>
-            <div className="doc-company">{e.nom}</div>
-            {e.forme && <div>{e.forme}</div>}
-            <div className="pre">{e.adresse}</div>
+            <div className="doc-company">{e.marque || e.nom}</div>
+            {e.chauffeur && <div className="strong">{e.chauffeur}</div>}
+            {e.statutChauffeur && <div>{e.statutChauffeur}</div>}
             {e.telephone && <div>Tél. {e.telephone}</div>}
             {e.email && <div>{e.email}</div>}
+            {e.marque && (
+              <div className="doc-issuer">
+                {isFacture ? "Facture émise par" : "Devis établi par"} <b>{e.nom}</b>
+                <div className="pre">{e.adresse}</div>
+              </div>
+            )}
+            {!e.marque && (
+              <>
+                {e.forme && <div>{e.forme}</div>}
+                <div className="pre">{e.adresse}</div>
+              </>
+            )}
           </div>
         </div>
         <div className="doc-title">
@@ -99,9 +111,14 @@ export default function DocumentView({ course, settings, type }) {
       )}
 
       <footer className="doc-foot">
-        {e.nom}{e.forme ? ` — ${e.forme}` : ""} · SIRET {e.siret}
-        {e.tvaIntra ? ` · TVA intracom. ${e.tvaIntra}` : ""}
-        {e.evtc ? ` · Registre VTC n° ${e.evtc}` : ""}
+        {[
+          e.nom + (e.forme ? ` — ${e.forme}` : ""),
+          e.adresse.replace(/\n/g, " "),
+          e.siret && `SIRET ${e.siret}`,
+          e.rcs,
+          e.tvaIntra && `TVA intracom. ${e.tvaIntra}`,
+          e.evtc && `Registre VTC n° ${e.evtc}`,
+        ].filter(Boolean).join(" · ")}
       </footer>
     </article>
   );

@@ -4,12 +4,18 @@ const K = { settings: "vtc.settings", courses: "vtc.courses", counters: "vtc.cou
 
 export const DEFAULT_SETTINGS = {
   entreprise: {
-    nom: "Votre nom / raison sociale",
-    forme: "",
-    adresse: "Adresse\n75000 Paris",
-    siret: "000 000 000 00000",
-    tvaIntra: "FR00 000000000",
-    evtc: "EVTC000000000",
+    // Ce que voit le client
+    marque: "Groupe HOLAMM",
+    chauffeur: "Jean-Christophe Lanzo",
+    statutChauffeur: "Chauffeur VTC — entrepreneur-salarié",
+    // Émetteur légal de la facture (coopérative)
+    nom: "Stairling Union",
+    forme: "SCIC SAS à capital variable — capital 6 004 €",
+    adresse: "5 rue Pleyel\n93200 Saint-Denis",
+    siret: "928 978 279 00018",
+    rcs: "928 978 279 R.C.S. Bobigny",
+    tvaIntra: "FR10928978279",
+    evtc: "",
     telephone: "",
     email: "",
     iban: "",

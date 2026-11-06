@@ -31,7 +31,7 @@ export default function App() {
   return (
     <div className="app">
       <header className="topbar no-print">
-        <div className="brand"><span className="brand-mark">◆</span> {settings.entreprise.nom && !settings.entreprise.nom.startsWith("Votre") ? settings.entreprise.nom : "VTC Facture"}</div>
+        <div className="brand"><span className="brand-mark">◆</span> {settings.entreprise.marque || settings.entreprise.nom || "VTC Facture"}</div>
       </header>
 
       <main>

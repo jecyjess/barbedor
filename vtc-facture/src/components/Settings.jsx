@@ -37,26 +37,34 @@ export default function Settings({ settings, onSave }) {
       <h2 className="screen-title">Réglages</h2>
 
       <section className="card">
-        <div className="card-title">Mon entreprise</div>
-        <Field label="Nom / raison sociale"><input value={s.entreprise.nom} onChange={ent("nom")} /></Field>
-        <Field label="Forme juridique" hint="ex. SASU au capital de 1 000 €, EI…"><input value={s.entreprise.forme} onChange={ent("forme")} /></Field>
-        <Field label="Adresse"><textarea rows={2} value={s.entreprise.adresse} onChange={ent("adresse")} /></Field>
-        <div className="row">
-          <Field label="SIRET"><input value={s.entreprise.siret} onChange={ent("siret")} /></Field>
-          <Field label="N° TVA intracom."><input value={s.entreprise.tvaIntra} onChange={ent("tvaIntra")} /></Field>
-        </div>
-        <Field label="N° d'inscription au registre VTC"><input value={s.entreprise.evtc} onChange={ent("evtc")} /></Field>
+        <div className="card-title">Ce que voit le client</div>
+        <Field label="Nom commercial"><input value={s.entreprise.marque} onChange={ent("marque")} /></Field>
+        <Field label="Chauffeur"><input value={s.entreprise.chauffeur} onChange={ent("chauffeur")} /></Field>
+        <Field label="Statut"><input value={s.entreprise.statutChauffeur} onChange={ent("statutChauffeur")} /></Field>
         <div className="row">
           <Field label="Téléphone"><input value={s.entreprise.telephone} onChange={ent("telephone")} /></Field>
           <Field label="E-mail"><input value={s.entreprise.email} onChange={ent("email")} /></Field>
         </div>
-        <Field label="IBAN (factures non réglées)"><input value={s.entreprise.iban} onChange={ent("iban")} /></Field>
         <Field label="Logo">
           <div className="logo-row">
             {s.entreprise.logo && <img src={s.entreprise.logo} alt="" className="logo-prev" />}
             <input type="file" accept="image/*" onChange={logo} />
           </div>
         </Field>
+      </section>
+
+      <section className="card">
+        <div className="card-title">Émetteur légal de la facture</div>
+        <Field label="Raison sociale"><input value={s.entreprise.nom} onChange={ent("nom")} /></Field>
+        <Field label="Forme juridique" hint="ex. SCIC SAS à capital variable — capital 6 004 €"><input value={s.entreprise.forme} onChange={ent("forme")} /></Field>
+        <Field label="Adresse"><textarea rows={2} value={s.entreprise.adresse} onChange={ent("adresse")} /></Field>
+        <div className="row">
+          <Field label="SIRET"><input value={s.entreprise.siret} onChange={ent("siret")} /></Field>
+          <Field label="N° TVA intracom."><input value={s.entreprise.tvaIntra} onChange={ent("tvaIntra")} /></Field>
+        </div>
+        <Field label="RCS"><input value={s.entreprise.rcs} onChange={ent("rcs")} /></Field>
+        <Field label="N° d'inscription au registre VTC"><input value={s.entreprise.evtc} onChange={ent("evtc")} /></Field>
+        <Field label="IBAN (factures non réglées)"><input value={s.entreprise.iban} onChange={ent("iban")} /></Field>
       </section>
 
       <section className="card">
