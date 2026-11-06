@@ -5,7 +5,7 @@ const K = { settings: "vtc.settings", courses: "vtc.courses", counters: "vtc.cou
 export const DEFAULT_SETTINGS = {
   entreprise: {
     // Ce que voit le client
-    marque: "Groupe HOLAMM",
+    marque: "Groupe HOLAM",
     chauffeur: "Jean-Christophe Lanzo",
     statutChauffeur: "Chauffeur VTC — entrepreneur-salarié",
     // Émetteur légal de la facture (coopérative)
