@@ -39,6 +39,7 @@ export default function Settings({ settings, onSave }) {
       <section className="card">
         <div className="card-title">Ce que voit le client</div>
         <Field label="Nom commercial"><input value={s.entreprise.marque} onChange={ent("marque")} /></Field>
+        <Field label="Préfixe des numéros" hint="ex. F-HOLAM-2026-11-001"><input value={s.entreprise.prefixe} onChange={ent("prefixe")} /></Field>
         <Field label="Chauffeur"><input value={s.entreprise.chauffeur} onChange={ent("chauffeur")} /></Field>
         <Field label="Statut"><input value={s.entreprise.statutChauffeur} onChange={ent("statutChauffeur")} /></Field>
         <div className="row">

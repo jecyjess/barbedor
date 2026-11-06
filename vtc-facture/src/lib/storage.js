@@ -5,7 +5,8 @@ const K = { settings: "vtc.settings", courses: "vtc.courses", counters: "vtc.cou
 export const DEFAULT_SETTINGS = {
   entreprise: {
     // Ce que voit le client
-    marque: "Groupe HOLAM",
+    marque: "HOLAM",
+    prefixe: "HOLAM", // dans les numéros : F-HOLAM-2026-11-001
     chauffeur: "Jean-Christophe Lanzo",
     statutChauffeur: "Chauffeur VTC — entrepreneur-salarié",
     // Émetteur légal de la facture (coopérative)
@@ -16,8 +17,8 @@ export const DEFAULT_SETTINGS = {
     rcs: "928 978 279 R.C.S. Bobigny",
     tvaIntra: "FR10928978279",
     evtc: "",
-    telephone: "",
-    email: "",
+    telephone: "+33 7 67 54 04 38",
+    email: "lanzojessie@gmail.com",
     iban: "",
     logo: "", // data URL
   },
@@ -61,14 +62,19 @@ export const saveSettings = (s) => write(K.settings, s);
 export const loadCourses = () => read(K.courses, []);
 export const saveCourses = (c) => write(K.courses, c);
 
-/** Numéro suivant, séquentiel par année et par type, jamais réutilisé. */
-export function nextNumber(type /* "D" | "F" */, date = new Date()) {
+/**
+ * Numéro suivant : D-HOLAM-2026-11-001 (devis) ou F-HOLAM-2026-11-001 (facture).
+ * Compteur séquentiel par type et par année (le mois est indicatif), jamais réutilisé.
+ */
+export function nextNumber(type /* "D" | "F" */, prefixe = "", date = new Date()) {
   const counters = read(K.counters, {});
   const y = date.getFullYear();
   const id = `${type}-${y}`;
   counters[id] = (counters[id] || 0) + 1;
   write(K.counters, counters);
-  return `${type}-${y}-${String(counters[id]).padStart(4, "0")}`;
+  const mm = String(date.getMonth() + 1).padStart(2, "0");
+  const pre = prefixe ? `${prefixe.trim().toUpperCase().replace(/\s+/g, "")}-` : "";
+  return `${type}-${pre}${y}-${mm}-${String(counters[id]).padStart(3, "0")}`;
 }
 
 export const uid = () => Math.random().toString(36).slice(2, 10) + Date.now().toString(36);

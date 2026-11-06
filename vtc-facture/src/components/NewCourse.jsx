@@ -113,7 +113,7 @@ export default function NewCourse({ settings, onCreated }) {
       datetime: datetime.toISOString(),
       passagers: +f.passagers || 0, bagages: +f.bagages || 0, notes: f.notes,
       promo: f.promo, transcript, audioId, route,
-      devis: { numero: nextNumber("D"), date: now, price },
+      devis: { numero: nextNumber("D", settings.entreprise.prefixe), date: now, price },
       facture: null,
     });
     setF(EMPTY());

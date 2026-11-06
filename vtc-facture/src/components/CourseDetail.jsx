@@ -53,7 +53,7 @@ export default function CourseDetail({ course, settings, onUpdate, onDelete, onB
     const now = new Date().toISOString();
     onUpdate({
       ...course,
-      facture: { numero: nextNumber("F"), date: now, price: preview, dureeReelleMin: +duree, supplementValide: supOn, paiement: paiement || null, datePaiement: paiement ? now : null },
+      facture: { numero: nextNumber("F", settings.entreprise.prefixe), date: now, price: preview, dureeReelleMin: +duree, supplementValide: supOn, paiement: paiement || null, datePaiement: paiement ? now : null },
     });
     setShowFact(false);
     setTab("facture");
