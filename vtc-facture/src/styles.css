@@ -217,3 +217,4 @@ label { display: flex; flex-direction: column; gap: 6px; font-size: 13px; color:
 .doc-issuer b { color: #1c1d21; }
 .quote-bottom { display: flex; justify-content: space-between; align-items: flex-end; padding-top: 4px; }
 .quote-bottom .muted { font-size: 13px; line-height: 1.4; }
+.interim { font-size: 15px; color: var(--gold2); text-align: center; font-style: italic; min-height: 1.4em; }

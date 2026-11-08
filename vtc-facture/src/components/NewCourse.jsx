@@ -148,7 +148,7 @@ export default function NewCourse({ settings, onCreated }) {
       <section className="card">
         <Recorder transcript={transcript} onTranscript={setTranscript} onAudio={setAudio} />
         <button className="btn primary wide" disabled={!transcript.trim() || busy} onClick={analyse}>
-          {busy === "analyse" ? "Analyse en cours…" : "Remplir la fiche depuis la dictée"}
+          {busy === "analyse" ? "Analyse en cours…" : transcript.trim() ? "Remplir la fiche depuis la dictée" : "Dictez d'abord la course"}
         </button>
         {audio && <div className="hint">Enregistrement audio conservé avec la course.</div>}
       </section>

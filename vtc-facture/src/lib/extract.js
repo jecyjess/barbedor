@@ -66,7 +66,7 @@ export function extractLocal(transcript, now = new Date()) {
   const out = { client_nom: "", client_telephone: "", client_email: "", depart: "", arrivee: "", date: "", heure: "", passagers: 0, bagages: 0, distance_km: 0, duree_min: 0, notes: "" };
 
   const nom = t.match(/\b(monsieur|madame|mademoiselle|m\.|mme)\s+([A-ZÀ-Ý][\wÀ-ÿ'-]+(?:\s+[A-ZÀ-Ý][\wÀ-ÿ'-]+)?)/i);
-  if (nom) out.client_nom = `${nom[1][0].toUpperCase()}${nom[1].slice(1).toLowerCase()} ${nom[2]}`;
+  if (nom) out.client_nom = `${nom[1][0].toUpperCase()}${nom[1].slice(1).toLowerCase()} ${nom[2].replace(/\s+(?:de|du|des|d|à|a|au|aux|pour|et|le|la)$/i, "")}`;
 
   const tel = t.match(/(?:\+33\s?|0)[1-9](?:[\s.-]?\d{2}){4}/);
   if (tel) out.client_telephone = tel[0].trim();

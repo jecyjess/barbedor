@@ -40,3 +40,11 @@ describe("extractLocal — parole naturelle", () => {
     expect(r.heure).toBe("09:30");
   });
 });
+
+describe("extractLocal — nom suivi du trajet", () => {
+  it("« Monsieur Martin de Vaujours pour aller à Bobigny »", () => {
+    const r = extractLocal("Monsieur Martin de Vaujours pour aller à Bobigny demain à 10h", now);
+    expect(r.client_nom).toBe("Monsieur Martin");
+    expect(r.depart).toBe("Vaujours");
+  });
+});
