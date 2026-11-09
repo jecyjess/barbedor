@@ -191,6 +191,12 @@ export default function NewCourse({ settings, onCreated }) {
       {route && price && (
         <section className="card quote">
           <div className="card-title">Ajuster la course</div>
+          {route.source && !["dictée", "saisie manuelle"].includes(route.source) && (
+            <div className="resolved">
+              <div><span className="dot a" />{route.origin}</div>
+              <div><span className="dot b" />{route.destination}</div>
+            </div>
+          )}
           <div className="row">
             <label>Distance (km)
               <input type="number" inputMode="decimal" step="0.1" min="0" value={route.distanceKm} onChange={(e) => setRoute({ ...route, distanceKm: e.target.value })} />

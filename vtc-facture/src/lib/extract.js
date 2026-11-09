@@ -7,8 +7,8 @@ const SCHEMA = {
     client_nom: { type: "string", description: "Nom du client, avec civilité si dite. Vide si inconnu." },
     client_telephone: { type: "string" },
     client_email: { type: "string" },
-    depart: { type: "string", description: "Adresse de prise en charge complète, telle que comprise" },
-    arrivee: { type: "string", description: "Adresse de destination complète" },
+    depart: { type: "string", description: "Adresse postale courte de prise en charge : numéro, rue, code postal, ville (ou nom du lieu + adresse)" },
+    arrivee: { type: "string", description: "Adresse postale courte de destination : numéro, rue, code postal, ville (ou nom du lieu + adresse)" },
     date: { type: "string", description: "Date de la course au format AAAA-MM-JJ. Vide si non dite." },
     heure: { type: "string", description: "Heure de prise en charge au format HH:MM (24 h). Vide si non dite." },
     passagers: { type: "integer" },
@@ -36,7 +36,10 @@ export async function extractWithClaude(transcript, apiKey, now = new Date()) {
     system:
       "Tu aides un chauffeur VTC en Île-de-France à remplir une fiche de course à partir d'une dictée (souvent une conversation avec le client, transcrite automatiquement, avec des fautes possibles). " +
       "Corrige les erreurs évidentes de transcription dans les noms de lieux (ex. « hors lit » = Orly, « roissy » = aéroport Paris-Charles-de-Gaulle). " +
-      "Résous les dates relatives (« demain », « vendredi ») par rapport à la date du jour. N'invente rien : laisse vide ce qui n'est pas dit, 0 pour un nombre inconnu.",
+      "Résous les dates relatives (« demain », « vendredi ») par rapport à la date du jour. N'invente rien : laisse vide ce qui n'est pas dit, 0 pour un nombre inconnu. " +
+      "Adresses (depart, arrivee) : format postal court uniquement — « numéro + rue, code postal + ville » (ex. « 20 rue du Pré aux Saules, 93410 Vaujours »). " +
+      "Jamais de quartier, département, région ni pays. Si le chauffeur nomme un lieu (mairie, gare, hôtel, hôpital, aéroport…), écris le nom du lieu suivi de son adresse " +
+      "si tu la connais avec certitude (ex. « Mairie d'Issy-les-Moulineaux, 62 rue du Général Leclerc, 92130 Issy-les-Moulineaux ») ; sinon le nom du lieu et la ville seulement, sans inventer de numéro.",
     messages: [
       {
         role: "user",

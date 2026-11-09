@@ -229,3 +229,5 @@ label { display: flex; flex-direction: column; gap: 6px; font-size: 13px; color:
 .ob-steps span.on { background: var(--gold); }
 .choice { flex-direction: row; align-items: flex-start; gap: 12px; padding: 12px; border: 1px solid var(--line); border-radius: 12px; color: var(--text); font-size: 14px; cursor: pointer; }
 .choice input { width: auto; margin-top: 3px; accent-color: var(--gold); }
+.resolved { display: flex; flex-direction: column; gap: 6px; font-size: 13px; color: var(--muted); }
+.resolved > div { display: flex; align-items: center; gap: 10px; }

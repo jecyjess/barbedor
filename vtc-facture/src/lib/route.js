@@ -41,17 +41,37 @@ async function googleRoute(key, origin, destination, date) {
     distanceKm: Math.round(el.distance.value / 100) / 10,
     durationMin: Math.round(dur.value / 60),
     source: "Google Maps (trafic prévu)",
-    origin: res.originAddresses?.[0] || origin,
-    destination: res.destinationAddresses?.[0] || destination,
+    origin: shortGoogle(res.originAddresses?.[0]) || origin,
+    destination: shortGoogle(res.destinationAddresses?.[0]) || destination,
   };
 }
 
+/**
+ * Adresse postale courte à partir d'un résultat OpenStreetMap :
+ * « Mairie d'Issy, 62 Rue du Général Leclerc, 92130 Issy-les-Moulineaux »
+ * (sans quartier, département, région ni pays).
+ */
+export function shortAddress(r) {
+  const a = r?.address || {};
+  const road = a.road || a.pedestrian || a.footway || a.square || a.place || "";
+  const rue = [a.house_number, road].filter(Boolean).join(" ");
+  const ville = a.city || a.town || a.village || a.municipality || a.hamlet || "";
+  const cpVille = [a.postcode, ville].filter(Boolean).join(" ");
+  const generic = ["highway", "place", "boundary", "building"].includes(r?.class) || r?.addresstype === "road";
+  const nom = r?.name && !generic && r.name !== road && r.name !== ville ? r.name : "";
+  const out = [nom, rue, cpVille].filter(Boolean).join(", ");
+  return out || (r?.display_name || "").split(",").slice(0, 3).join(",").trim();
+}
+
+/** Adresse Google sans le pays : « 12 Rue X, 75004 Paris ». */
+export const shortGoogle = (s) => (s || "").replace(/,\s*(France|FR)$/i, "").trim();
+
 async function geocode(q) {
-  const url = `https://nominatim.openstreetmap.org/search?format=json&limit=1&countrycodes=fr&accept-language=fr&q=${encodeURIComponent(q)}`;
+  const url = `https://nominatim.openstreetmap.org/search?format=jsonv2&addressdetails=1&limit=1&countrycodes=fr&accept-language=fr&q=${encodeURIComponent(q)}`;
   const r = await fetch(url, { headers: { Accept: "application/json" } });
   const j = await r.json();
   if (!j[0]) throw new Error(`Adresse introuvable : ${q}`);
-  return { lat: +j[0].lat, lon: +j[0].lon, label: j[0].display_name };
+  return { lat: +j[0].lat, lon: +j[0].lon, label: shortAddress(j[0]) };
 }
 
 /** Coefficient de trafic Île-de-France approximatif, selon l'heure. */
