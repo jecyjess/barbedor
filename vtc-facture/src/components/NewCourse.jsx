@@ -218,10 +218,14 @@ export default function NewCourse({ settings, onCreated }) {
           <label>Prix convenu avec le client (€) — facultatif
             <input type="number" inputMode="decimal" step="0.5" min="0" placeholder={`Prix calculé : ${price.prixCalcule}`} value={f.prixFinal} onChange={set("prixFinal")} />
           </label>
-          {price.prixConvenu && (
+          {price.prixConvenu && Number(route.distanceKm) > 0 && (
             <div className="hint">Distance réelle conservée : une ligne « {price.prixConvenu < price.prixCalcule ? "Remise commerciale" : "Ajustement de prix"} » ramène le total à {euro(price.prixConvenu)}.</div>
           )}
 
+          {!Number(route.distanceKm) ? (
+            <div className="hint warn">Indiquez la distance pour calculer le prix.</div>
+          ) : (
+            <>
           <ul className="lines">
             {price.lines.map((l) => (
               <li key={l.code}><span>{l.label}</span><span>{euro(l.amount)}</span></li>
@@ -231,6 +235,8 @@ export default function NewCourse({ settings, onCreated }) {
             <div className="muted">{price.tauxTva > 0 ? <>Total TTC<br />dont TVA {euro(price.tva)}</> : <>Total<br />TVA non applicable</>}</div>
             <div className="quote-total">{euro(price.ttc)}</div>
           </div>
+            </>
+          )}
           <button className="btn gold wide big" disabled={!Number(route.distanceKm)} onClick={createDevis}>Créer le devis</button>
         </section>
       )}

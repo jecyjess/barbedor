@@ -1,5 +1,5 @@
 import { describe, it, expect } from "vitest";
-import { shortAddress, shortGoogle } from "./route.js";
+import { shortAddress, shortGoogle, geocodeCandidates } from "./route.js";
 
 describe("adresses courtes", () => {
   it("adresse avec numéro : sans quartier, département, région ni pays", () => {
@@ -17,5 +17,16 @@ describe("adresses courtes", () => {
   });
   it("Google : on retire le pays", () => {
     expect(shortGoogle("12 Rue de Rivoli, 75004 Paris, France")).toBe("12 Rue de Rivoli, 75004 Paris");
+  });
+});
+
+describe("variantes de recherche", () => {
+  it("lieu + adresse : essaie sans le nom, puis lieu + ville, puis ville", () => {
+    expect(geocodeCandidates("Mairie d'Issy-les-Moulineaux, 62 rue du Général Leclerc, 92130 Issy-les-Moulineaux").map((c) => c.q)).toEqual([
+      "Mairie d'Issy-les-Moulineaux, 62 rue du Général Leclerc, 92130 Issy-les-Moulineaux",
+      "62 rue du Général Leclerc, 92130 Issy-les-Moulineaux",
+      "Mairie d'Issy-les-Moulineaux, 92130 Issy-les-Moulineaux",
+      "92130 Issy-les-Moulineaux",
+    ]);
   });
 });

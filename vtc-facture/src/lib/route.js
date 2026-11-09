@@ -66,12 +66,43 @@ export function shortAddress(r) {
 /** Adresse Google sans le pays : « 12 Rue X, 75004 Paris ». */
 export const shortGoogle = (s) => (s || "").replace(/,\s*(France|FR)$/i, "").trim();
 
-async function geocode(q) {
+const wait = (ms) => new Promise((r) => setTimeout(r, ms));
+
+/**
+ * Variantes à essayer quand OpenStreetMap ne trouve pas l'adresse telle quelle
+ * (il comprend mal « Nom du lieu, numéro rue, CP ville » en une seule phrase).
+ */
+export function geocodeCandidates(q) {
+  const parts = q.split(",").map((p) => p.trim()).filter(Boolean);
+  const list = [{ q, exact: true }];
+  if (parts.length >= 3) list.push({ q: parts.slice(1).join(", "), exact: true }); // sans le nom du lieu
+  if (parts.length >= 2) list.push({ q: `${parts[0]}, ${parts.at(-1)}`, exact: true }); // lieu + ville
+  if (parts.length >= 2) list.push({ q: parts.at(-1), exact: false }); // ville seule : approximatif
+  return list.filter((c, i, a) => a.findIndex((x) => x.q === c.q) === i);
+}
+
+async function nominatim(q) {
   const url = `https://nominatim.openstreetmap.org/search?format=jsonv2&addressdetails=1&limit=1&countrycodes=fr&accept-language=fr&q=${encodeURIComponent(q)}`;
   const r = await fetch(url, { headers: { Accept: "application/json" } });
-  const j = await r.json();
-  if (!j[0]) throw new Error(`Adresse introuvable : ${q}`);
-  return { lat: +j[0].lat, lon: +j[0].lon, label: shortAddress(j[0]) };
+  return (await r.json())[0] || null;
+}
+
+async function geocode(q) {
+  const tries = geocodeCandidates(q);
+  for (let i = 0; i < tries.length; i++) {
+    if (i) await wait(1100); // OpenStreetMap demande au plus une recherche par seconde
+    const hit = await nominatim(tries[i].q);
+    if (hit) {
+      return {
+        lat: +hit.lat,
+        lon: +hit.lon,
+        // Trouvé tel quel : adresse courte d'OpenStreetMap. Sinon : on garde l'adresse dictée.
+        label: i === 0 ? shortAddress(hit) : q,
+        approx: !tries[i].exact,
+      };
+    }
+  }
+  throw new Error(`Adresse introuvable : ${q}`);
 }
 
 /** Coefficient de trafic Île-de-France approximatif, selon l'heure. */
@@ -94,7 +125,7 @@ async function osmRoute(origin, destination, date) {
   return {
     distanceKm: Math.round(r.distance / 100) / 10,
     durationMin: Math.round((r.duration / 60) * trafficFactor(date)),
-    source: "OpenStreetMap (trafic estimé)",
+    source: a.approx || b.approx ? "OpenStreetMap (trafic estimé) — adresse approximative, vérifiez la distance" : "OpenStreetMap (trafic estimé)",
     origin: a.label,
     destination: b.label,
   };
