@@ -25,13 +25,13 @@ export default function DocumentView({ course, settings, type }) {
             {e.carteVtc && <div>Carte professionnelle VTC n° {e.carteVtc}</div>}
             {e.telephone && <div>Tél. {e.telephone}</div>}
             {e.email && <div>{e.email}</div>}
-            {e.marque && (
+            {e.marque && e.marque !== e.nom && (
               <div className="doc-issuer">
                 {isFacture ? "Facture émise par" : "Devis établi par"} <b>{e.nom}</b>
                 <div className="pre">{e.adresse}</div>
               </div>
             )}
-            {!e.marque && (
+            {(!e.marque || e.marque === e.nom) && (
               <>
                 {e.forme && <div>{e.forme}</div>}
                 <div className="pre">{e.adresse}</div>
@@ -74,7 +74,7 @@ export default function DocumentView({ course, settings, type }) {
 
       <table className="doc-table">
         <thead>
-          <tr><th>Désignation</th><th>Montant TTC</th></tr>
+          <tr><th>Désignation</th><th>{q.tauxTva > 0 ? "Montant TTC" : "Montant"}</th></tr>
         </thead>
         <tbody>
           {q.lines.map((l) => (
@@ -82,9 +82,18 @@ export default function DocumentView({ course, settings, type }) {
           ))}
         </tbody>
         <tfoot>
-          <tr><td>Total HT</td><td>{euro(q.ht)}</td></tr>
-          <tr><td>TVA {q.tauxTva} %</td><td>{euro(q.tva)}</td></tr>
-          <tr className="grand"><td>Total TTC</td><td>{euro(q.ttc)}</td></tr>
+          {q.tauxTva > 0 ? (
+            <>
+              <tr><td>Total HT</td><td>{euro(q.ht)}</td></tr>
+              <tr><td>TVA {q.tauxTva} %</td><td>{euro(q.tva)}</td></tr>
+              <tr className="grand"><td>Total TTC</td><td>{euro(q.ttc)}</td></tr>
+            </>
+          ) : (
+            <>
+              <tr className="grand"><td>Total</td><td>{euro(q.ttc)}</td></tr>
+              <tr><td colSpan={2}>TVA non applicable, art. 293 B du CGI</td></tr>
+            </>
+          )}
         </tfoot>
       </table>
 
@@ -94,7 +103,7 @@ export default function DocumentView({ course, settings, type }) {
             <b>Durée estimée : {q.dureeEstimeeMin} min</b>, selon le trafic prévu à l'heure de la course. Une tolérance de {q.toleranceMin} min est
             incluse. Au-delà de {q.seuilMinutesSup} min de trajet, chaque minute supplémentaire sera facturée {euro(q.prixMinuteSup)} TTC.
           </p>
-          <p>Devis gratuit. Prix TTC, TVA {q.tauxTva} % incluse.</p>
+          <p>Devis gratuit. {q.tauxTva > 0 ? `Prix TTC, TVA ${q.tauxTva} % incluse.` : "TVA non applicable, art. 293 B du CGI."}</p>
           <div className="sign">Bon pour accord — date et signature du client :</div>
         </section>
       )}
@@ -136,6 +145,6 @@ export function documentSummary(course, type) {
     `De : ${course.route?.origin || course.depart}`,
     `À : ${course.route?.destination || course.arrivee}`,
     `${course.route?.distanceKm} km — durée estimée ${q.dureeEstimeeMin} min`,
-    `Total : ${euro(q.ttc)} TTC (dont TVA ${euro(q.tva)})`,
+    q.tauxTva > 0 ? `Total : ${euro(q.ttc)} TTC (dont TVA ${euro(q.tva)})` : `Total : ${euro(q.ttc)} (TVA non applicable)`,
   ].filter(Boolean).join("\n");
 }

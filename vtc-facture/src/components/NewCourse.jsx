@@ -214,7 +214,7 @@ export default function NewCourse({ settings, onCreated }) {
             ))}
           </ul>
           <div className="quote-bottom">
-            <div className="muted">Total TTC<br />dont TVA {euro(price.tva)}</div>
+            <div className="muted">{price.tauxTva > 0 ? <>Total TTC<br />dont TVA {euro(price.tva)}</> : <>Total<br />TVA non applicable</>}</div>
             <div className="quote-total">{euro(price.ttc)}</div>
           </div>
           <button className="btn gold wide big" disabled={!Number(route.distanceKm)} onClick={createDevis}>Créer le devis</button>

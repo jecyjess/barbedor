@@ -1,5 +1,6 @@
 import { useState } from "react";
 import { DEFAULT_TARIFS } from "../lib/pricing.js";
+import { IS_SC } from "../lib/edition.js";
 
 function Field({ label, children, hint }) {
   return (
@@ -65,7 +66,7 @@ export default function Settings({ settings, onSave }) {
           <Field label="N° TVA intracom."><input value={s.entreprise.tvaIntra} onChange={ent("tvaIntra")} /></Field>
         </div>
         <Field label="RCS"><input value={s.entreprise.rcs} onChange={ent("rcs")} /></Field>
-        <Field label="N° d'inscription au registre VTC (exploitant)" hint="Numéro EVTC de Stairling Union"><input value={s.entreprise.evtc} onChange={ent("evtc")} /></Field>
+        <Field label="N° d'inscription au registre VTC (exploitant)" hint="Numéro EVTC de l'entreprise qui facture"><input value={s.entreprise.evtc} onChange={ent("evtc")} /></Field>
         <Field label="IBAN (factures non réglées)"><input value={s.entreprise.iban} onChange={ent("iban")} /></Field>
       </section>
 
@@ -81,7 +82,7 @@ export default function Settings({ settings, onSave }) {
         </div>
         <div className="row">
           <Field label="Majoration (%)" hint="nuit, week-end, fériés">{num(s.tarifs.majorationPct, tar("majorationPct"), "1")}</Field>
-          <Field label="TVA (%)">{num(s.tarifs.tva, tar("tva"), "0.1")}</Field>
+          <Field label="TVA (%)">{s.tvaFranchise ? <input value="Franchise" disabled /> : num(s.tarifs.tva, tar("tva"), "0.1")}</Field>
         </div>
         <div className="row">
           <Field label="Début de nuit (h)">{num(s.tarifs.nuitDebut, tar("nuitDebut"), "1")}</Field>
@@ -96,9 +97,14 @@ export default function Settings({ settings, onSave }) {
           <Field label="CDG (€)">{num(s.tarifs.supplements.cdg, sup("cdg"))}</Field>
           <Field label="Beauvais (€)">{num(s.tarifs.supplements.beauvais, sup("beauvais"))}</Field>
         </div>
-        <button className="btn ghost" onClick={() => setS({ ...s, tarifs: DEFAULT_TARIFS })}>Rétablir la grille par défaut</button>
+        <label className="switch">
+          <input type="checkbox" checked={!!s.tvaFranchise} onChange={(e) => setS({ ...s, tvaFranchise: e.target.checked, tarifs: { ...s.tarifs, tva: e.target.checked ? 0 : 10 } })} />
+          <span />Franchise de TVA (art. 293 B du CGI)
+        </label>
+        <button className="btn ghost" onClick={() => setS({ ...s, tarifs: { ...DEFAULT_TARIFS, tva: s.tvaFranchise ? 0 : DEFAULT_TARIFS.tva } })}>Rétablir la grille par défaut</button>
       </section>
 
+      {!IS_SC && (
       <section className="card">
         <div className="card-title">Services connectés</div>
         <Field label="Clé Google Maps" hint="Trafic en temps réel et saisie d'adresse. Sans clé : OpenStreetMap avec trafic estimé.">
@@ -110,6 +116,7 @@ export default function Settings({ settings, onSave }) {
         <Field label="Validité des devis (jours)">{num(s.validiteDevisJours, (e) => setS({ ...s, validiteDevisJours: +e.target.value }), "1")}</Field>
         <small className="muted">Les clés restent uniquement sur ce téléphone.</small>
       </section>
+      )}
 
       <button className="btn gold wide big sticky-save" onClick={save}>{saved ? "Enregistré ✓" : "Enregistrer"}</button>
     </div>

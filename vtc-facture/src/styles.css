@@ -218,3 +218,14 @@ label { display: flex; flex-direction: column; gap: 6px; font-size: 13px; color:
 .quote-bottom { display: flex; justify-content: space-between; align-items: flex-end; padding-top: 4px; }
 .quote-bottom .muted { font-size: 13px; line-height: 1.4; }
 .interim { font-size: 15px; color: var(--gold2); text-align: center; font-style: italic; min-height: 1.4em; }
+
+/* Premier lancement (édition SC) */
+.onboarding { padding-top: 12px; }
+.ob-head { text-align: center; display: flex; flex-direction: column; align-items: center; gap: 6px; }
+.ob-head p { margin: 0; max-width: 420px; font-size: 14px; line-height: 1.5; }
+.ob-mark { font-size: 34px; color: var(--gold); line-height: 1; }
+.ob-steps { display: flex; gap: 6px; margin-top: 8px; }
+.ob-steps span { width: 28px; height: 4px; border-radius: 4px; background: #2b2f3a; }
+.ob-steps span.on { background: var(--gold); }
+.choice { flex-direction: row; align-items: flex-start; gap: 12px; padding: 12px; border: 1px solid var(--line); border-radius: 12px; color: var(--text); font-size: 14px; cursor: pointer; }
+.choice input { width: auto; margin-top: 3px; accent-color: var(--gold); }

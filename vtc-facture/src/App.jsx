@@ -3,6 +3,8 @@ import NewCourse from "./components/NewCourse.jsx";
 import CourseList from "./components/CourseList.jsx";
 import CourseDetail from "./components/CourseDetail.jsx";
 import Settings from "./components/Settings.jsx";
+import Onboarding from "./components/Onboarding.jsx";
+import { APP_NAME } from "./lib/edition.js";
 import { loadCourses, loadSettings, saveCourses, saveSettings } from "./lib/storage.js";
 
 const Icon = {
@@ -28,10 +30,20 @@ export default function App() {
     window.scrollTo(0, 0);
   };
 
+  if (!settings.configured) {
+    return (
+      <div className="app">
+        <main>
+          <Onboarding settings={settings} onDone={(s) => { setSettings(s); saveSettings(s); window.scrollTo(0, 0); }} />
+        </main>
+      </div>
+    );
+  }
+
   return (
     <div className="app">
       <header className="topbar no-print">
-        <div className="brand"><span className="brand-mark">◆</span> {settings.entreprise.marque || settings.entreprise.nom || "VTC Facture"}</div>
+        <div className="brand"><span className="brand-mark">◆</span> {settings.entreprise.marque || settings.entreprise.chauffeur || APP_NAME}</div>
       </header>
 
       <main>

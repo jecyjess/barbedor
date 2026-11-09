@@ -1,9 +1,17 @@
 import { DEFAULT_TARIFS } from "./pricing.js";
+import { IS_SC } from "./edition.js";
 
-const K = { settings: "vtc.settings", courses: "vtc.courses", counters: "vtc.counters" };
+// Chaque édition a ses propres données (même si elles sont ouvertes sur le même téléphone).
+const P = IS_SC ? "vtc-sc" : "vtc";
+const K = { settings: `${P}.settings`, courses: `${P}.courses`, counters: `${P}.counters` };
 
-export const DEFAULT_SETTINGS = {
-  entreprise: {
+const ENTREPRISE_VIDE = {
+  marque: "", prefixe: "", chauffeur: "", statutChauffeur: "Chauffeur VTC",
+  nom: "", forme: "", adresse: "", siret: "", rcs: "", tvaIntra: "",
+  evtc: "", carteVtc: "", telephone: "", email: "", iban: "", logo: "",
+};
+
+const ENTREPRISE_HOLAM = {
     // Ce que voit le client
     marque: "HOLAM",
     prefixe: "HOLAM", // dans les numéros : F-HOLAM-2026-11-001
@@ -22,7 +30,13 @@ export const DEFAULT_SETTINGS = {
     email: "lanzojessie@gmail.com",
     iban: "",
     logo: "", // data URL
-  },
+};
+
+export const DEFAULT_SETTINGS = {
+  configured: !IS_SC, // l'édition SC demande la configuration au premier lancement
+  tvaFranchise: false, // true : « TVA non applicable, art. 293 B du CGI »
+  // Comparaison littérale : permet de retirer l'identité HOLAM du code de l'édition SC.
+  entreprise: import.meta.env.VITE_EDITION === "sc" ? ENTREPRISE_VIDE : ENTREPRISE_HOLAM,
   tarifs: DEFAULT_TARIFS,
   googleMapsKey: "",
   anthropicKey: "",
@@ -47,7 +61,7 @@ function write(k, v) {
 
 export function loadSettings() {
   const s = read(K.settings, {});
-  return {
+  const merged = {
     ...DEFAULT_SETTINGS,
     ...s,
     entreprise: { ...DEFAULT_SETTINGS.entreprise, ...(s.entreprise || {}) },
@@ -57,8 +71,13 @@ export function loadSettings() {
       supplements: { ...DEFAULT_TARIFS.supplements, ...(s.tarifs?.supplements || {}) },
     },
   };
+  if (IS_SC) {
+    merged.anthropicKey = "";
+    merged.googleMapsKey = "";
+  }
+  return merged;
 }
-export const saveSettings = (s) => write(K.settings, s);
+export const saveSettings = (s) => write(K.settings, IS_SC ? { ...s, anthropicKey: "", googleMapsKey: "" } : s);
 
 export const loadCourses = () => read(K.courses, []);
 export const saveCourses = (c) => write(K.courses, c);
