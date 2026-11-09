@@ -85,3 +85,18 @@ describe("prix convenu avec le client", () => {
     expect(computePrice({ ...base, prixFinal: 50, supplementTemps: { minutes: 10 } }).ttc).toBe(53);
   });
 });
+
+describe("forfait", () => {
+  it("un seul montant, sans distance, TVA incluse", () => {
+    const p = computePrice({ distanceKm: 0, durationMin: 0, date: nuit, arrivee: "Orly", forfait: 60 });
+    expect(p.lines).toEqual([{ code: "forfait", label: "Forfait transport", amount: 60 }]);
+    expect(p.ttc).toBe(60);
+    expect(p.tva).toBe(5.45);
+  });
+  it("pas de dépassement proposé sans durée estimée", () => {
+    expect(computePrice({ distanceKm: 0, durationMin: 0, date: jour, forfait: 60, dureeReelleMin: 50 }).minutesSupProposees).toBe(0);
+  });
+  it("temps supplémentaire ajouté à la main en plus du forfait", () => {
+    expect(computePrice({ distanceKm: 0, durationMin: 0, date: jour, forfait: 60, supplementTemps: { minutes: 10 } }).ttc).toBe(63);
+  });
+});

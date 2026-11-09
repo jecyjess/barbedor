@@ -14,7 +14,7 @@ function defaults() {
 const EMPTY = () => ({
   nom: "", telephone: "", email: "", adresse: "",
   depart: "", arrivee: "", ...defaults(),
-  passagers: 1, bagages: 0, notes: "", promo: false, prixFinal: "",
+  passagers: 1, bagages: 0, notes: "", promo: false, prixFinal: "", forfaitOn: false, forfait: "",
 });
 
 function AddressInput({ value, onChange, placeholder, googleKey, icon }) {
@@ -57,8 +57,8 @@ export default function NewCourse({ settings, onCreated }) {
   const price = useMemo(
     () =>
       route &&
-      computePrice({ distanceKm: route.distanceKm, durationMin: route.durationMin, date: datetime, depart: f.depart, arrivee: f.arrivee, promo: f.promo, prixFinal: f.prixFinal, tarifs: settings.tarifs }),
-    [route, datetime, f.depart, f.arrivee, f.promo, f.prixFinal, settings.tarifs]
+      computePrice({ distanceKm: route.distanceKm, durationMin: route.durationMin, date: datetime, depart: f.depart, arrivee: f.arrivee, promo: f.promo, prixFinal: f.prixFinal, forfait: f.forfaitOn ? f.forfait : null, tarifs: settings.tarifs }),
+    [route, datetime, f.depart, f.arrivee, f.promo, f.prixFinal, f.forfaitOn, f.forfait, settings.tarifs]
   );
 
   // Toute modification d'adresse invalide l'itinéraire calculé.
@@ -130,7 +130,8 @@ export default function NewCourse({ settings, onCreated }) {
       depart: f.depart, arrivee: f.arrivee,
       datetime: datetime.toISOString(),
       passagers: +f.passagers || 0, bagages: +f.bagages || 0, notes: f.notes,
-      promo: f.promo, prixFinal: Number(f.prixFinal) > 0 ? Number(f.prixFinal) : null, transcript, audioId,
+      promo: f.promo, prixFinal: !f.forfaitOn && Number(f.prixFinal) > 0 ? Number(f.prixFinal) : null,
+      forfait: f.forfaitOn && Number(f.forfait) > 0 ? Number(f.forfait) : null, transcript, audioId,
       route: { ...route, distanceKm: Number(route.distanceKm) || 0, durationMin: Math.round(Number(route.durationMin) || 0), source: route.source || "saisie manuelle" },
       devis: { numero: nextNumber("D", settings.entreprise.prefixe), date: now, price },
       facture: null,
@@ -215,17 +216,42 @@ export default function NewCourse({ settings, onCreated }) {
             {route.source ? ` Source : ${route.source}.` : ""}
           </div>
 
+          {!f.forfaitOn && (
+            <>
           <label>Prix convenu avec le client (€) — facultatif
             <input type="number" inputMode="decimal" step="0.5" min="0" placeholder={`Prix calculé : ${price.prixCalcule}`} value={f.prixFinal} onChange={set("prixFinal")} />
           </label>
           {price.prixConvenu && Number(route.distanceKm) > 0 && (
             <div className="hint">Distance réelle conservée : une ligne « {price.prixConvenu < price.prixCalcule ? "Remise commerciale" : "Ajustement de prix"} » ramène le total à {euro(price.prixConvenu)}.</div>
           )}
+            </>
+          )}
 
-          {!Number(route.distanceKm) ? (
-            <div className="hint warn">Indiquez la distance pour calculer le prix.</div>
+          {!Number(route.distanceKm) && !f.forfaitOn ? (
+            <div className="forfait-ask">
+              <div>Pas de distance ? <b>Avez-vous un prix forfaitaire ?</b></div>
+              <div className="row">
+                <button className="btn gold" onClick={() => setF((s) => ({ ...s, forfaitOn: true }))}>Oui, forfait</button>
+                <button className="btn" onClick={() => document.querySelector(".quote input")?.focus()}>Non, je saisis la distance</button>
+              </div>
+            </div>
+          ) : f.forfaitOn && !(Number(f.forfait) > 0) ? (
+            <>
+              <label>Prix forfaitaire TTC (€)
+                <input type="number" inputMode="decimal" step="0.5" min="0" autoFocus value={f.forfait} onChange={set("forfait")} placeholder="ex. 60" />
+              </label>
+              <button className="btn ghost" onClick={() => setF((s) => ({ ...s, forfaitOn: false, forfait: "" }))}>Annuler le forfait</button>
+            </>
           ) : (
             <>
+          {f.forfaitOn && (
+            <div className="row forfait-row">
+              <label>Prix forfaitaire TTC (€)
+                <input type="number" inputMode="decimal" step="0.5" min="0" value={f.forfait} onChange={set("forfait")} />
+              </label>
+              <button className="btn ghost" onClick={() => setF((s) => ({ ...s, forfaitOn: false, forfait: "" }))}>Sans forfait</button>
+            </div>
+          )}
           <ul className="lines">
             {price.lines.map((l) => (
               <li key={l.code}><span>{l.label}</span><span>{euro(l.amount)}</span></li>
@@ -237,7 +263,7 @@ export default function NewCourse({ settings, onCreated }) {
           </div>
             </>
           )}
-          <button className="btn gold wide big" disabled={!Number(route.distanceKm)} onClick={createDevis}>Créer le devis</button>
+          <button className="btn gold wide big" disabled={!(Number(route.distanceKm) > 0 || (f.forfaitOn && Number(f.forfait) > 0))} onClick={createDevis}>Créer le devis</button>
         </section>
       )}
     </div>

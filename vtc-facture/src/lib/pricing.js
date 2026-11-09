@@ -65,6 +65,7 @@ export function computePrice({
   dureeReelleMin = null,
   supplementTemps = null, // { minutes, prixMinute?, montant? } — validé par le chauffeur
   prixFinal = null, // prix convenu avec le client (hors temps supplémentaire)
+  forfait = null, // prix forfaitaire TTC : remplace tout le calcul au kilomètre
   tarifs = DEFAULT_TARIFS,
 }) {
   const t = { ...DEFAULT_TARIFS, ...tarifs, supplements: { ...DEFAULT_TARIFS.supplements, ...(tarifs?.supplements || {}) } };
@@ -72,49 +73,60 @@ export function computePrice({
   const prixKm = promo ? t.prixKmPromo : t.prixKm;
   const lines = [];
 
-  lines.push({ code: "pec", label: "Prise en charge", amount: round2(t.priseEnCharge) });
-  lines.push({
-    code: "km",
-    label: `Distance ${km.toLocaleString("fr-FR", { maximumFractionDigits: 1 })} km × ${prixKm.toFixed(2).replace(".", ",")} €${promo ? " (tarif promo)" : ""}`,
-    amount: round2(km * prixKm),
-  });
-
-  const base = lines.reduce((s, l) => s + l.amount, 0);
-  const reason = majorationReason(date, t);
-  if (reason && t.majorationPct) {
+  const forfaitN = Number(forfait) || 0;
+  let reason = null;
+  let course = 0;
+  let convenu = NaN;
+  let prixCalcule = 0;
+  if (forfaitN > 0) {
+    // Forfait : un seul montant, tout compris (pas de km, de majoration ni de supplément aéroport).
+    lines.push({ code: "forfait", label: "Forfait transport", amount: round2(forfaitN) });
+    course = prixCalcule = round2(forfaitN);
+  } else {
+    lines.push({ code: "pec", label: "Prise en charge", amount: round2(t.priseEnCharge) });
     lines.push({
-      code: "maj",
-      label: `Majoration ${t.majorationPct} % (${reason})`,
-      amount: round2((base * t.majorationPct) / 100),
+      code: "km",
+      label: `Distance ${km.toLocaleString("fr-FR", { maximumFractionDigits: 1 })} km × ${prixKm.toFixed(2).replace(".", ",")} €${promo ? " (tarif promo)" : ""}`,
+      amount: round2(km * prixKm),
     });
-  }
 
-  for (const a of detectAirports(depart, arrivee)) {
-    const amount = Number(t.supplements[a]) || 0;
-    if (amount) lines.push({ code: `apt_${a}`, label: `Supplément aéroport ${AIRPORTS[a].label}`, amount: round2(amount) });
-  }
+    const base = lines.reduce((s, l) => s + l.amount, 0);
+    reason = majorationReason(date, t);
+    if (reason && t.majorationPct) {
+      lines.push({
+        code: "maj",
+        label: `Majoration ${t.majorationPct} % (${reason})`,
+        amount: round2((base * t.majorationPct) / 100),
+      });
+    }
 
-  let course = round2(lines.reduce((s, l) => s + l.amount, 0));
-  if (course < t.minimum) {
-    lines.push({ code: "min", label: `Complément prix minimum (${t.minimum} €)`, amount: round2(t.minimum - course) });
-    course = t.minimum;
-  }
+    for (const a of detectAirports(depart, arrivee)) {
+      const amount = Number(t.supplements[a]) || 0;
+      if (amount) lines.push({ code: `apt_${a}`, label: `Supplément aéroport ${AIRPORTS[a].label}`, amount: round2(amount) });
+    }
 
-  // Prix convenu : on garde les vrais kilomètres et on ajoute une remise (ou un ajustement)
-  // pour que le total tombe exactement sur le prix annoncé au client.
-  const convenu = prixFinal === null || prixFinal === "" ? NaN : Number(prixFinal);
-  const prixCalcule = course;
-  if (convenu > 0 && round2(convenu) !== course) {
-    const diff = round2(convenu - course);
-    lines.push({ code: "ajust", label: diff < 0 ? "Remise commerciale" : "Ajustement de prix", amount: diff });
-    course = round2(convenu);
+    course = round2(lines.reduce((s, l) => s + l.amount, 0));
+    if (course < t.minimum) {
+      lines.push({ code: "min", label: `Complément prix minimum (${t.minimum} €)`, amount: round2(t.minimum - course) });
+      course = t.minimum;
+    }
+
+    // Prix convenu : on garde les vrais kilomètres et on ajoute une remise (ou un ajustement)
+    // pour que le total tombe exactement sur le prix annoncé au client.
+    convenu = prixFinal === null || prixFinal === "" ? NaN : Number(prixFinal);
+    prixCalcule = course;
+    if (convenu > 0 && round2(convenu) !== course) {
+      const diff = round2(convenu - course);
+      lines.push({ code: "ajust", label: diff < 0 ? "Remise commerciale" : "Ajustement de prix", amount: diff });
+      course = round2(convenu);
+    }
   }
 
   // Le temps supplémentaire n'est jamais ajouté automatiquement : il est seulement
   // proposé (minutesSupProposees). Le chauffeur le valide et l'ajuste via `supplementTemps`.
   const estimated = Math.round(Number(durationMin) || 0);
   let minutesSupProposees = 0;
-  if (dureeReelleMin != null && dureeReelleMin !== "") {
+  if (estimated > 0 && dureeReelleMin != null && dureeReelleMin !== "") {
     const depassement = Math.round(Number(dureeReelleMin)) - estimated;
     if (depassement > t.toleranceMin) minutesSupProposees = depassement - t.toleranceMin;
   }
@@ -146,6 +158,7 @@ export function computePrice({
     minutesSup,
     minutesSupProposees,
     prixCalcule,
+    forfait: forfaitN > 0 ? round2(forfaitN) : null,
     prixConvenu: convenu > 0 ? round2(convenu) : null,
     dureeEstimeeMin: estimated,
     seuilMinutesSup: estimated + t.toleranceMin,

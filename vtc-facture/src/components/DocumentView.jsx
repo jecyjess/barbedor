@@ -68,7 +68,7 @@ export default function DocumentView({ course, settings, type }) {
         <div><span className="dot a" />{course.route?.origin || course.depart}</div>
         <div><span className="dot b" />{course.route?.destination || course.arrivee}</div>
         <div className="doc-route-meta">
-          {course.route?.distanceKm} km · durée {isFacture && course.facture.supplementValide ? `réelle ${course.facture.dureeReelleMin} min (estimée ${q.dureeEstimeeMin} min)` : `estimée ${q.dureeEstimeeMin} min`}
+          {routeMeta(course, q, isFacture)}
         </div>
       </section>
 
@@ -99,10 +99,10 @@ export default function DocumentView({ course, settings, type }) {
 
       {!isFacture && (
         <section className="doc-notes">
-          <p>
+          {q.dureeEstimeeMin > 0 && <p>
             <b>Durée estimée : {q.dureeEstimeeMin} min</b>, selon le trafic prévu à l'heure de la course. Une tolérance de {q.toleranceMin} min est
             incluse. Au-delà de {q.seuilMinutesSup} min de trajet, chaque minute supplémentaire sera facturée {euro(q.prixMinuteSup)} TTC.
-          </p>
+          </p>}
           <p>Devis gratuit. {q.tauxTva > 0 ? `Prix TTC, TVA ${q.tauxTva} % incluse.` : "TVA non applicable, art. 293 B du CGI."}</p>
           <div className="sign">Bon pour accord — date et signature du client :</div>
         </section>
@@ -134,6 +134,17 @@ export default function DocumentView({ course, settings, type }) {
   );
 }
 
+/** « 32 km · durée estimée 40 min », « Forfait · 48 km parcourus », etc. */
+function routeMeta(course, q, isFacture) {
+  const km = (isFacture && course.facture?.distanceKm) || course.route?.distanceKm || 0;
+  const parts = [];
+  if (q.forfait) parts.push("Forfait");
+  if (km > 0) parts.push(`${km} km${q.forfait && isFacture && course.facture?.distanceKm ? " parcourus" : ""}`);
+  if (isFacture && course.facture.supplementValide) parts.push(`durée réelle ${course.facture.dureeReelleMin} min${q.dureeEstimeeMin ? ` (estimée ${q.dureeEstimeeMin} min)` : ""}`);
+  else if (q.dureeEstimeeMin > 0) parts.push(`durée estimée ${q.dureeEstimeeMin} min`);
+  return parts.join(" · ");
+}
+
 export function documentSummary(course, type) {
   const isF = type === "facture";
   const q = isF ? course.facture.price : course.devis.price;
@@ -144,7 +155,7 @@ export function documentSummary(course, type) {
     `${new Date(course.datetime).toLocaleString("fr-FR", { dateStyle: "full", timeStyle: "short" })}`,
     `De : ${course.route?.origin || course.depart}`,
     `À : ${course.route?.destination || course.arrivee}`,
-    `${course.route?.distanceKm} km — durée estimée ${q.dureeEstimeeMin} min`,
+    routeMeta(course, q, isF),
     q.tauxTva > 0 ? `Total : ${euro(q.ttc)} TTC (dont TVA ${euro(q.tva)})` : `Total : ${euro(q.ttc)} (TVA non applicable)`,
   ].filter(Boolean).join("\n");
 }

@@ -231,3 +231,6 @@ label { display: flex; flex-direction: column; gap: 6px; font-size: 13px; color:
 .choice input { width: auto; margin-top: 3px; accent-color: var(--gold); }
 .resolved { display: flex; flex-direction: column; gap: 6px; font-size: 13px; color: var(--muted); }
 .resolved > div { display: flex; align-items: center; gap: 10px; }
+.forfait-ask { display: flex; flex-direction: column; gap: 10px; padding: 12px; border-radius: 12px; background: rgba(201, 169, 110, 0.06); border: 1px solid rgba(201, 169, 110, 0.3); font-size: 14px; }
+.forfait-row { align-items: flex-end; }
+.forfait-row .btn { flex: 0 0 auto; }

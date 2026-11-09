@@ -12,6 +12,7 @@ export default function CourseDetail({ course, settings, onUpdate, onDelete, onB
   const [duree, setDuree] = useState(course.devis.price.dureeEstimeeMin);
   const [paiement, setPaiement] = useState("carte bancaire");
   const [prixFinal, setPrixFinal] = useState(course.prixFinal ?? "");
+  const [kmReels, setKmReels] = useState(""); // forfait : distance parcourue, facultative
 
   useEffect(() => {
     let url;
@@ -27,7 +28,8 @@ export default function CourseDetail({ course, settings, onUpdate, onDelete, onB
     arrivee: course.arrivee,
     promo: course.promo,
     dureeReelleMin: duree,
-    prixFinal,
+    prixFinal: course.forfait ? null : prixFinal,
+    forfait: course.forfait || null,
     tarifs: settings.tarifs,
   };
   const proposal = computePrice(priceArgs).minutesSupProposees;
@@ -41,7 +43,7 @@ export default function CourseDetail({ course, settings, onUpdate, onDelete, onB
   useEffect(() => {
     setSupMin(proposal);
     setSupMontant("");
-    setSupOn(proposal > 0 && !course.prixFinal); // appliqué par défaut, sauf si un prix a été convenu
+    setSupOn(proposal > 0 && !course.prixFinal && !course.forfait); // appliqué par défaut, sauf si un prix a été convenu
     setSupEdit(false);
   }, [proposal]);
 
@@ -55,7 +57,7 @@ export default function CourseDetail({ course, settings, onUpdate, onDelete, onB
     const now = new Date().toISOString();
     onUpdate({
       ...course,
-      facture: { numero: nextNumber("F", settings.entreprise.prefixe), date: now, price: preview, dureeReelleMin: +duree, supplementValide: supOn, paiement: paiement || null, datePaiement: paiement ? now : null },
+      facture: { numero: nextNumber("F", settings.entreprise.prefixe), date: now, price: preview, dureeReelleMin: +duree, supplementValide: supOn, distanceKm: Number(kmReels) > 0 ? Number(kmReels) : null, paiement: paiement || null, datePaiement: paiement ? now : null },
     });
     setShowFact(false);
     setTab("facture");
@@ -115,9 +117,15 @@ export default function CourseDetail({ course, settings, onUpdate, onDelete, onB
                   </select>
                 </label>
               </div>
-              <label>Prix convenu (€) — facultatif
-                <input type="number" inputMode="decimal" step="0.5" min="0" placeholder={`Prix calculé : ${preview.prixCalcule}`} value={prixFinal} onChange={(e) => setPrixFinal(e.target.value)} />
-              </label>
+              {course.forfait ? (
+                <label>Distance parcourue (km) — facultatif, pour information
+                  <input type="number" inputMode="decimal" step="0.1" min="0" placeholder="Forfait : le prix ne change pas" value={kmReels} onChange={(e) => setKmReels(e.target.value)} />
+                </label>
+              ) : (
+                <label>Prix convenu (€) — facultatif
+                  <input type="number" inputMode="decimal" step="0.5" min="0" placeholder={`Prix calculé : ${preview.prixCalcule}`} value={prixFinal} onChange={(e) => setPrixFinal(e.target.value)} />
+                </label>
+              )}
               <div className="hint">
                 Estimée : {preview.dureeEstimeeMin} min · tolérance {preview.toleranceMin} min
                 {!proposal && " · pas de dépassement"}
