@@ -66,3 +66,22 @@ describe("computePrice", () => {
     expect(detectAirports("Orly", "CDG")).toEqual(["orly", "cdg"]);
   });
 });
+
+describe("prix convenu avec le client", () => {
+  const base = { distanceKm: 32, durationMin: 40, date: jour }; // 5 + 48 = 53 €
+  it("remise pour tomber pile sur 50 €, kilomètres inchangés, TVA recalculée", () => {
+    const p = computePrice({ ...base, prixFinal: 50 });
+    expect(p.prixCalcule).toBe(53);
+    expect(p.ttc).toBe(50);
+    expect(p.lines.find((l) => l.code === "km").amount).toBe(48);
+    expect(p.lines.at(-1)).toMatchObject({ code: "ajust", label: "Remise commerciale", amount: -3 });
+    expect(p.ht).toBe(45.45);
+    expect(p.tva).toBe(4.55);
+  });
+  it("pas de ligne si le prix convenu est le prix calculé", () => {
+    expect(computePrice({ ...base, prixFinal: 53 }).lines.some((l) => l.code === "ajust")).toBe(false);
+  });
+  it("le temps supplémentaire s'ajoute au prix convenu", () => {
+    expect(computePrice({ ...base, prixFinal: 50, supplementTemps: { minutes: 10 } }).ttc).toBe(53);
+  });
+});

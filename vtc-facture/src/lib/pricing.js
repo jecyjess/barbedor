@@ -64,6 +64,7 @@ export function computePrice({
   promo = false,
   dureeReelleMin = null,
   supplementTemps = null, // { minutes, prixMinute?, montant? } — validé par le chauffeur
+  prixFinal = null, // prix convenu avec le client (hors temps supplémentaire)
   tarifs = DEFAULT_TARIFS,
 }) {
   const t = { ...DEFAULT_TARIFS, ...tarifs, supplements: { ...DEFAULT_TARIFS.supplements, ...(tarifs?.supplements || {}) } };
@@ -97,6 +98,16 @@ export function computePrice({
   if (course < t.minimum) {
     lines.push({ code: "min", label: `Complément prix minimum (${t.minimum} €)`, amount: round2(t.minimum - course) });
     course = t.minimum;
+  }
+
+  // Prix convenu : on garde les vrais kilomètres et on ajoute une remise (ou un ajustement)
+  // pour que le total tombe exactement sur le prix annoncé au client.
+  const convenu = prixFinal === null || prixFinal === "" ? NaN : Number(prixFinal);
+  const prixCalcule = course;
+  if (convenu > 0 && round2(convenu) !== course) {
+    const diff = round2(convenu - course);
+    lines.push({ code: "ajust", label: diff < 0 ? "Remise commerciale" : "Ajustement de prix", amount: diff });
+    course = round2(convenu);
   }
 
   // Le temps supplémentaire n'est jamais ajouté automatiquement : il est seulement
@@ -134,6 +145,8 @@ export function computePrice({
     majoration: reason,
     minutesSup,
     minutesSupProposees,
+    prixCalcule,
+    prixConvenu: convenu > 0 ? round2(convenu) : null,
     dureeEstimeeMin: estimated,
     seuilMinutesSup: estimated + t.toleranceMin,
     prixMinuteSup: t.prixMinuteSup,

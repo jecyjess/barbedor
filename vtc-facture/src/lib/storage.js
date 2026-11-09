@@ -71,13 +71,10 @@ export function loadSettings() {
       supplements: { ...DEFAULT_TARIFS.supplements, ...(s.tarifs?.supplements || {}) },
     },
   };
-  if (IS_SC) {
-    merged.anthropicKey = "";
-    merged.googleMapsKey = "";
-  }
+  if (IS_SC) merged.googleMapsKey = ""; // la clé IA peut être activée par l'administrateur (jamais affichée)
   return merged;
 }
-export const saveSettings = (s) => write(K.settings, IS_SC ? { ...s, anthropicKey: "", googleMapsKey: "" } : s);
+export const saveSettings = (s) => write(K.settings, IS_SC ? { ...s, googleMapsKey: "" } : s);
 
 export const loadCourses = () => read(K.courses, []);
 export const saveCourses = (c) => write(K.courses, c);

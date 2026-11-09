@@ -15,6 +15,8 @@ function Field({ label, children, hint }) {
 export default function Settings({ settings, onSave }) {
   const [s, setS] = useState(settings);
   const [saved, setSaved] = useState(false);
+  const [showCode, setShowCode] = useState(false);
+  const [code, setCode] = useState("");
   const ent = (k) => (e) => setS({ ...s, entreprise: { ...s.entreprise, [k]: e.target.value } });
   const tar = (k) => (e) => setS({ ...s, tarifs: { ...s.tarifs, [k]: e.target.value === "" ? "" : +e.target.value } });
   const sup = (k) => (e) => setS({ ...s, tarifs: { ...s.tarifs, supplements: { ...s.tarifs.supplements, [k]: +e.target.value } } });
@@ -104,6 +106,33 @@ export default function Settings({ settings, onSave }) {
         <button className="btn ghost" onClick={() => setS({ ...s, tarifs: { ...DEFAULT_TARIFS, tva: s.tvaFranchise ? 0 : DEFAULT_TARIFS.tva } })}>Rétablir la grille par défaut</button>
       </section>
 
+      {IS_SC && (
+        <section className="card">
+          <div className="card-title">Assistant IA</div>
+          {s.anthropicKey ? (
+            <div className="extra-fixed">
+              <span>IA activée ✓ — la dictée est comprise par l'IA</span>
+              <button type="button" className="link" onClick={() => { const n = { ...s, anthropicKey: "" }; setS(n); onSave(n); }}>Désactiver</button>
+            </div>
+          ) : !showCode ? (
+            <>
+              <div className="hint">Dictée analysée sur le téléphone.</div>
+              <button type="button" className="link" onClick={() => setShowCode(true)}>Activer l'IA avec un code d'accès</button>
+            </>
+          ) : (
+            <>
+              <input type="password" autoComplete="off" placeholder="Code d'accès" value={code} onChange={(e) => setCode(e.target.value.trim())} />
+              <button
+                className="btn"
+                disabled={!code.startsWith("sk-ant-")}
+                onClick={() => { const n = { ...s, anthropicKey: code }; setS(n); onSave(n); setCode(""); setShowCode(false); }}
+              >
+                Activer
+              </button>
+            </>
+          )}
+        </section>
+      )}
       {!IS_SC && (
       <section className="card">
         <div className="card-title">Services connectés</div>

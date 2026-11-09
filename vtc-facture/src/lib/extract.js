@@ -15,9 +15,10 @@ const SCHEMA = {
     bagages: { type: "integer" },
     distance_km: { type: "number", description: "Distance si elle est dite (km), sinon 0" },
     duree_min: { type: "integer", description: "Durée du trajet si elle est dite (minutes), sinon 0" },
+    prix_final: { type: "number", description: "Prix total convenu avec le client si le chauffeur l'annonce (ex. « ça fera 50 euros »), sinon 0" },
     notes: { type: "string", description: "Autres informations utiles (numéro de vol, siège enfant, etc.)" },
   },
-  required: ["client_nom", "client_telephone", "client_email", "depart", "arrivee", "date", "heure", "passagers", "bagages", "distance_km", "duree_min", "notes"],
+  required: ["client_nom", "client_telephone", "client_email", "depart", "arrivee", "date", "heure", "passagers", "bagages", "distance_km", "duree_min", "prix_final", "notes"],
   additionalProperties: false,
 };
 
@@ -63,7 +64,7 @@ const JOURS = ["dimanche", "lundi", "mardi", "mercredi", "jeudi", "vendredi", "s
 /** Analyse locale, sans IA : repère les tournures les plus courantes. */
 export function extractLocal(transcript, now = new Date()) {
   const t = " " + transcript.replace(/\s+/g, " ") + " ";
-  const out = { client_nom: "", client_telephone: "", client_email: "", depart: "", arrivee: "", date: "", heure: "", passagers: 0, bagages: 0, distance_km: 0, duree_min: 0, notes: "" };
+  const out = { client_nom: "", client_telephone: "", client_email: "", depart: "", arrivee: "", date: "", heure: "", passagers: 0, bagages: 0, distance_km: 0, duree_min: 0, prix_final: 0, notes: "" };
 
   const nom = t.match(/\b(monsieur|madame|mademoiselle|m\.|mme)\s+([A-ZÀ-Ý][\wÀ-ÿ'-]+(?:\s+[A-ZÀ-Ý][\wÀ-ÿ'-]+)?)/i);
   if (nom) out.client_nom = `${nom[1][0].toUpperCase()}${nom[1].slice(1).toLowerCase()} ${nom[2].replace(/\s+(?:de|du|des|d|à|a|au|aux|pour|et|le|la)$/i, "")}`;
@@ -115,6 +116,8 @@ export function extractLocal(transcript, now = new Date()) {
 
   const km = t.match(/\b(\d{1,4}(?:[.,]\d)?)\s?(?:km|kilomètres?|kilos?)\b/i);
   if (km) out.distance_km = Number(km[1].replace(",", "."));
+  const prix = [...t.matchAll(/\b(\d{1,4}(?:[.,]\d{1,2})?)\s?(?:€|euros?)\b/gi)].at(-1);
+  if (prix) out.prix_final = Number(prix[1].replace(",", "."));
   const mn = t.match(/\b(\d{1,3})\s?(?:minutes?|min|mn)\b/i);
   if (mn) out.duree_min = Number(mn[1]);
 

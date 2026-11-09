@@ -14,7 +14,7 @@ function defaults() {
 const EMPTY = () => ({
   nom: "", telephone: "", email: "", adresse: "",
   depart: "", arrivee: "", ...defaults(),
-  passagers: 1, bagages: 0, notes: "", promo: false,
+  passagers: 1, bagages: 0, notes: "", promo: false, prixFinal: "",
 });
 
 function AddressInput({ value, onChange, placeholder, googleKey, icon }) {
@@ -57,8 +57,8 @@ export default function NewCourse({ settings, onCreated }) {
   const price = useMemo(
     () =>
       route &&
-      computePrice({ distanceKm: route.distanceKm, durationMin: route.durationMin, date: datetime, depart: f.depart, arrivee: f.arrivee, promo: f.promo, tarifs: settings.tarifs }),
-    [route, datetime, f.depart, f.arrivee, f.promo, settings.tarifs]
+      computePrice({ distanceKm: route.distanceKm, durationMin: route.durationMin, date: datetime, depart: f.depart, arrivee: f.arrivee, promo: f.promo, prixFinal: f.prixFinal, tarifs: settings.tarifs }),
+    [route, datetime, f.depart, f.arrivee, f.promo, f.prixFinal, settings.tarifs]
   );
 
   // Toute modification d'adresse invalide l'itinéraire calculé.
@@ -93,6 +93,7 @@ export default function NewCourse({ settings, onCreated }) {
       passagers: data.passagers || s.passagers,
       bagages: data.bagages || s.bagages,
       notes: data.notes || s.notes,
+      prixFinal: data.prix_final > 0 ? String(data.prix_final) : s.prixFinal,
     }));
     setMsg({ kind: error ? "warn" : "ok", text: error ? `IA indisponible (${error}) — fiche remplie par ${engine}.` : `Fiche remplie par ${engine}. Vérifiez puis calculez le trajet.` });
     setBusy("");
@@ -129,7 +130,7 @@ export default function NewCourse({ settings, onCreated }) {
       depart: f.depart, arrivee: f.arrivee,
       datetime: datetime.toISOString(),
       passagers: +f.passagers || 0, bagages: +f.bagages || 0, notes: f.notes,
-      promo: f.promo, transcript, audioId,
+      promo: f.promo, prixFinal: Number(f.prixFinal) > 0 ? Number(f.prixFinal) : null, transcript, audioId,
       route: { ...route, distanceKm: Number(route.distanceKm) || 0, durationMin: Math.round(Number(route.durationMin) || 0), source: route.source || "saisie manuelle" },
       devis: { numero: nextNumber("D", settings.entreprise.prefixe), date: now, price },
       facture: null,
@@ -207,6 +208,13 @@ export default function NewCourse({ settings, onCreated }) {
             au-delà de {price.seuilMinutesSup} min, {euro(price.prixMinuteSup)} par minute (modifiable en fin de course).
             {route.source ? ` Source : ${route.source}.` : ""}
           </div>
+
+          <label>Prix convenu avec le client (€) — facultatif
+            <input type="number" inputMode="decimal" step="0.5" min="0" placeholder={`Prix calculé : ${price.prixCalcule}`} value={f.prixFinal} onChange={set("prixFinal")} />
+          </label>
+          {price.prixConvenu && (
+            <div className="hint">Distance réelle conservée : une ligne « {price.prixConvenu < price.prixCalcule ? "Remise commerciale" : "Ajustement de prix"} » ramène le total à {euro(price.prixConvenu)}.</div>
+          )}
 
           <ul className="lines">
             {price.lines.map((l) => (

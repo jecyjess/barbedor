@@ -48,3 +48,9 @@ describe("extractLocal — nom suivi du trajet", () => {
     expect(r.depart).toBe("Vaujours");
   });
 });
+
+describe("extractLocal — prix annoncé", () => {
+  it("« ça fera 50 euros »", () => {
+    expect(extractLocal("De Vaujours à Roissy demain 8h, ça fera 50 euros", now).prix_final).toBe(50);
+  });
+});

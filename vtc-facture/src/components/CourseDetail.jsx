@@ -11,6 +11,7 @@ export default function CourseDetail({ course, settings, onUpdate, onDelete, onB
   const [showFact, setShowFact] = useState(false);
   const [duree, setDuree] = useState(course.devis.price.dureeEstimeeMin);
   const [paiement, setPaiement] = useState("carte bancaire");
+  const [prixFinal, setPrixFinal] = useState(course.prixFinal ?? "");
 
   useEffect(() => {
     let url;
@@ -26,6 +27,7 @@ export default function CourseDetail({ course, settings, onUpdate, onDelete, onB
     arrivee: course.arrivee,
     promo: course.promo,
     dureeReelleMin: duree,
+    prixFinal,
     tarifs: settings.tarifs,
   };
   const proposal = computePrice(priceArgs).minutesSupProposees;
@@ -39,7 +41,7 @@ export default function CourseDetail({ course, settings, onUpdate, onDelete, onB
   useEffect(() => {
     setSupMin(proposal);
     setSupMontant("");
-    setSupOn(proposal > 0); // dépassement appliqué par défaut, le chauffeur peut l'enlever
+    setSupOn(proposal > 0 && !course.prixFinal); // appliqué par défaut, sauf si un prix a été convenu
     setSupEdit(false);
   }, [proposal]);
 
@@ -113,6 +115,9 @@ export default function CourseDetail({ course, settings, onUpdate, onDelete, onB
                   </select>
                 </label>
               </div>
+              <label>Prix convenu (€) — facultatif
+                <input type="number" inputMode="decimal" step="0.5" min="0" placeholder={`Prix calculé : ${preview.prixCalcule}`} value={prixFinal} onChange={(e) => setPrixFinal(e.target.value)} />
+              </label>
               <div className="hint">
                 Estimée : {preview.dureeEstimeeMin} min · tolérance {preview.toleranceMin} min
                 {!proposal && " · pas de dépassement"}
