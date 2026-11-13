@@ -1,5 +1,5 @@
 import { describe, it, expect } from "vitest";
-import { shortAddress, shortGoogle, geocodeCandidates } from "./route.js";
+import { shortAddress, shortGoogle, geocodeCandidates, movingBearing } from "./route.js";
 
 describe("adresses courtes", () => {
   it("adresse avec numéro : sans quartier, département, région ni pays", () => {
@@ -28,5 +28,14 @@ describe("variantes de recherche", () => {
       "Mairie d'Issy-les-Moulineaux, 92130 Issy-les-Moulineaux",
       "92130 Issy-les-Moulineaux",
     ]);
+  });
+});
+
+describe("sens de circulation", () => {
+  it("pris en compte seulement en roulant", () => {
+    expect(movingBearing({ heading: 92.4, speed: 20 })).toBe(92);
+    expect(movingBearing({ heading: 92.4, speed: 0.5 })).toBeNull(); // à l'arrêt : sens peu fiable
+    expect(movingBearing({ heading: null, speed: 20 })).toBeNull();
+    expect(movingBearing(null)).toBeNull();
   });
 });

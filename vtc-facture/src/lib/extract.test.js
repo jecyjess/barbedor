@@ -54,3 +54,14 @@ describe("extractLocal — prix annoncé", () => {
     expect(extractLocal("De Vaujours à Roissy demain 8h, ça fera 50 euros", now).prix_final).toBe(50);
   });
 });
+
+describe("extractLocal — départ depuis ma position", () => {
+  it("« je pars d'ici pour aller à Montreuil »", () => {
+    const r = extractLocal("Je pars d'ici pour aller à Montreuil dans 10 minutes", now);
+    expect(r.depart).toBe("MA_POSITION");
+    expect(r.arrivee).toBe("Montreuil");
+  });
+  it("« de ma position jusqu'à la gare de Lyon »", () => {
+    expect(extractLocal("De ma position jusqu'à la gare de Lyon", now).depart).toBe("MA_POSITION");
+  });
+});

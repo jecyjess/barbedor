@@ -147,6 +147,15 @@ export default function Settings({ settings, onSave }) {
       </section>
       )}
 
+      <section className="card">
+        <div className="card-title">Position GPS</div>
+        <label className="switch">
+          <input type="checkbox" checked={s.gps !== false} onChange={(e) => setS({ ...s, gps: e.target.checked })} />
+          <span />Partir de ma position (« je pars d'ici »)
+        </label>
+        <small className="muted">Votre position n'est lue qu'au moment où vous la demandez, pour calculer le trajet. Elle n'est pas conservée.</small>
+      </section>
+
       <button className="btn gold wide big sticky-save" onClick={save}>{saved ? "Enregistré ✓" : "Enregistrer"}</button>
     </div>
   );

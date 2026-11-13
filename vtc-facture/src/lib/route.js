@@ -116,29 +116,78 @@ export function trafficFactor(date) {
   return 1.3;
 }
 
-async function osmRoute(origin, destination, date) {
-  const [a, b] = await Promise.all([geocode(origin), geocode(destination)]);
-  const url = `https://router.project-osrm.org/route/v1/driving/${a.lon},${a.lat};${b.lon},${b.lat}?overview=false`;
+async function osmRoute(origin, destination, date, originPos = null) {
+  const [a, b] = await Promise.all([
+    originPos ? Promise.resolve({ lat: originPos.lat, lon: originPos.lon, label: origin }) : geocode(origin),
+    geocode(destination),
+  ]);
+  // En roulant, on impose le sens de circulation au départ (impossible de faire demi-tour sur l'autoroute).
+  const bearing = movingBearing(originPos);
+  const extra = bearing != null ? `&bearings=${bearing},45;` : "";
+  const url = `https://router.project-osrm.org/route/v1/driving/${a.lon},${a.lat};${b.lon},${b.lat}?overview=false${extra}`;
   const j = await (await fetch(url)).json();
   const r = j.routes?.[0];
   if (!r) throw new Error("Itinéraire introuvable (OSM)");
   return {
     distanceKm: Math.round(r.distance / 100) / 10,
     durationMin: Math.round((r.duration / 60) * trafficFactor(date)),
-    source: a.approx || b.approx ? "OpenStreetMap (trafic estimé) — adresse approximative, vérifiez la distance" : "OpenStreetMap (trafic estimé)",
+    source:
+      (a.approx || b.approx ? "OpenStreetMap (trafic estimé) — adresse approximative, vérifiez la distance" : "OpenStreetMap (trafic estimé)") +
+      (bearing != null ? " — depuis votre position, dans votre sens de circulation" : ""),
     origin: a.label,
     destination: b.label,
   };
 }
 
-export async function computeRoute({ origin, destination, date, googleKey }) {
+/** Cap (0–359°) si le véhicule roule assez vite pour que le sens soit fiable, sinon null. */
+export function movingBearing(pos) {
+  if (!pos || pos.heading == null || isNaN(pos.heading) || !(pos.speed > 2)) return null;
+  return Math.round(((pos.heading % 360) + 360) % 360);
+}
+
+/** Position GPS actuelle du téléphone. */
+export function getPosition() {
+  return new Promise((resolve, reject) => {
+    if (!navigator.geolocation) return reject(new Error("Ce téléphone ne donne pas sa position."));
+    navigator.geolocation.getCurrentPosition(
+      (p) => resolve({ lat: p.coords.latitude, lon: p.coords.longitude, heading: p.coords.heading, speed: p.coords.speed, accuracy: p.coords.accuracy }),
+      (e) =>
+        reject(
+          new Error(
+            e.code === 1
+              ? "Position refusée : autorisez la localisation pour ce site dans les réglages du navigateur."
+              : "Position introuvable pour le moment. Réessayez dans un endroit dégagé."
+          )
+        ),
+      { enableHighAccuracy: true, timeout: 15000, maximumAge: 20000 }
+    );
+  });
+}
+
+/** Adresse courte d'une position GPS (« 12 Rue X, 93100 Montreuil »). */
+export async function reverseGeocode(lat, lon) {
+  try {
+    const url = `https://nominatim.openstreetmap.org/reverse?format=jsonv2&addressdetails=1&zoom=18&accept-language=fr&lat=${lat}&lon=${lon}`;
+    const j = await (await fetch(url, { headers: { Accept: "application/json" } })).json();
+    const label = shortAddress({ ...j, name: "" });
+    if (label) return `${label} (position GPS)`;
+  } catch {
+    /* hors ligne : on garde les coordonnées */
+  }
+  return `Position GPS (${lat.toFixed(5)}, ${lon.toFixed(5)})`;
+}
+
+export async function computeRoute({ origin, destination, date, googleKey, originPos = null }) {
   if (!origin || !destination) throw new Error("Indiquez le départ et l'arrivée");
-  if (googleKey) {
+  // Google ne tient pas compte du sens de circulation : en roulant, on passe par OpenStreetMap.
+  if (googleKey && movingBearing(originPos) == null) {
     try {
-      return await googleRoute(googleKey, origin, destination, date);
+      const o = originPos ? { lat: originPos.lat, lng: originPos.lon } : origin;
+      const r = await googleRoute(googleKey, o, destination, date);
+      return originPos ? { ...r, origin } : r;
     } catch (e) {
       console.warn("Google indisponible, bascule OSM :", e);
     }
   }
-  return osmRoute(origin, destination, date);
+  return osmRoute(origin, destination, date, originPos);
 }

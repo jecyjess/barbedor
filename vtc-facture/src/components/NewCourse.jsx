@@ -1,7 +1,7 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 import Recorder from "./Recorder.jsx";
 import { extractCourse } from "../lib/extract.js";
-import { computeRoute, loadGoogleMaps } from "../lib/route.js";
+import { computeRoute, loadGoogleMaps, getPosition, reverseGeocode } from "../lib/route.js";
 import { computePrice, euro } from "../lib/pricing.js";
 import { nextNumber, saveAudio, uid } from "../lib/storage.js";
 
@@ -17,7 +17,7 @@ const EMPTY = () => ({
   passagers: 1, bagages: 0, notes: "", promo: false, prixFinal: "", forfaitOn: false, forfait: "",
 });
 
-function AddressInput({ value, onChange, placeholder, googleKey, icon }) {
+function AddressInput({ value, onChange, placeholder, googleKey, icon, onLocate, locating }) {
   const ref = useRef(null);
   useEffect(() => {
     if (!googleKey || !ref.current) return;
@@ -40,6 +40,15 @@ function AddressInput({ value, onChange, placeholder, googleKey, icon }) {
     <div className="addr">
       <span className={`dot ${icon}`} />
       <input ref={ref} value={value} onChange={(e) => onChange(e.target.value)} placeholder={placeholder} autoComplete="off" />
+      {onLocate && (
+        <button type="button" className={`locate ${locating ? "busy" : ""}`} onClick={onLocate} disabled={locating} aria-label="Partir de ma position" title="Partir de ma position">
+          <svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round">
+            <circle cx="12" cy="12" r="3.2" fill="currentColor" stroke="none" />
+            <circle cx="12" cy="12" r="7" />
+            <path d="M12 2v3M12 19v3M2 12h3M19 12h3" />
+          </svg>
+        </button>
+      )}
     </div>
   );
 }
@@ -51,6 +60,23 @@ export default function NewCourse({ settings, onCreated }) {
   const [route, setRoute] = useState(null);
   const [busy, setBusy] = useState("");
   const [msg, setMsg] = useState(null);
+  const [pos, setPos] = useState(null); // position GPS utilisée comme départ
+  const gps = settings.gps !== false;
+
+  async function locate() {
+    setBusy("gps");
+    setMsg(null);
+    try {
+      const p = await getPosition();
+      const label = await reverseGeocode(p.lat, p.lon);
+      setPos({ ...p, at: Date.now() });
+      setF((s) => ({ ...s, depart: label }));
+      setMsg({ kind: "ok", text: `Départ : votre position${p.accuracy ? ` (précision ${Math.round(p.accuracy)} m)` : ""}.` });
+    } catch (e) {
+      setMsg({ kind: "warn", text: e.message });
+    }
+    setBusy("");
+  }
   const set = (k) => (v) => setF((s) => ({ ...s, [k]: v?.target ? (v.target.type === "checkbox" ? v.target.checked : v.target.value) : v }));
 
   const datetime = useMemo(() => new Date(`${f.date}T${f.heure || "00:00"}`), [f.date, f.heure]);
@@ -74,6 +100,8 @@ export default function NewCourse({ settings, onCreated }) {
     setBusy("analyse");
     setMsg(null);
     const { data, engine, error } = await extractCourse(transcript, settings.anthropicKey);
+    const fromHere = data.depart === "MA_POSITION";
+    if (fromHere) data.depart = "";
     if (data.distance_km > 0) {
       dictated.current = { distanceKm: data.distance_km, durationMin: data.duree_min || "", source: "dictée", origin: data.depart || f.depart, destination: data.arrivee || f.arrivee };
       if ((data.depart || f.depart) === f.depart && (data.arrivee || f.arrivee) === f.arrivee) {
@@ -97,13 +125,22 @@ export default function NewCourse({ settings, onCreated }) {
     }));
     setMsg({ kind: error ? "warn" : "ok", text: error ? `IA indisponible (${error}) — fiche remplie par ${engine}.` : `Fiche remplie par ${engine}. Vérifiez puis calculez le trajet.` });
     setBusy("");
+    if (fromHere) {
+      if (gps) await locate();
+      else setMsg({ kind: "warn", text: "Départ « d'ici » : activez la position GPS dans Réglages, ou saisissez l'adresse." });
+    }
   }
 
   async function calc() {
     setBusy("route");
     setMsg(null);
     try {
-      setRoute(await computeRoute({ origin: f.depart, destination: f.arrivee, date: datetime, googleKey: settings.googleMapsKey }));
+      let originPos = pos;
+      // Position de plus de 2 minutes : on la rafraîchit (le véhicule a pu bouger).
+      if (pos && Date.now() - (pos.at || 0) > 120000) {
+        try { originPos = await getPosition(); setPos({ ...originPos, at: Date.now() }); } catch { /* on garde l'ancienne */ }
+      }
+      setRoute(await computeRoute({ origin: f.depart, destination: f.arrivee, date: datetime, googleKey: settings.googleMapsKey, originPos }));
     } catch (e) {
       setMsg({ kind: "warn", text: `${e.message} — saisissez la distance et la durée à la main.` });
       manual();
@@ -159,7 +196,7 @@ export default function NewCourse({ settings, onCreated }) {
 
       <section className="card">
         <div className="card-title">Trajet</div>
-        <AddressInput icon="a" value={f.depart} onChange={set("depart")} placeholder="Adresse de prise en charge" googleKey={settings.googleMapsKey} />
+        <AddressInput icon="a" value={f.depart} onChange={(v) => { setPos(null); set("depart")(v); }} placeholder="Adresse de prise en charge" googleKey={settings.googleMapsKey} onLocate={gps ? locate : null} locating={busy === "gps"} />
         <AddressInput icon="b" value={f.arrivee} onChange={set("arrivee")} placeholder="Destination" googleKey={settings.googleMapsKey} />
         <div className="row">
           <label>Date<input type="date" value={f.date} onChange={set("date")} /></label>

@@ -38,6 +38,7 @@ export async function extractWithClaude(transcript, apiKey, now = new Date()) {
       "Corrige les erreurs évidentes de transcription dans les noms de lieux (ex. « hors lit » = Orly, « roissy » = aéroport Paris-Charles-de-Gaulle). " +
       "Résous les dates relatives (« demain », « vendredi ») par rapport à la date du jour. N'invente rien : laisse vide ce qui n'est pas dit, 0 pour un nombre inconnu. " +
       "Adresses (depart, arrivee) : format postal court uniquement — « numéro + rue, code postal + ville » (ex. « 20 rue du Pré aux Saules, 93410 Vaujours »). " +
+      "Si le chauffeur part de l'endroit où il se trouve (« je pars d'ici », « de ma position », « là où je suis »), écris exactement MA_POSITION comme départ. " +
       "Jamais de quartier, département, région ni pays. Si le chauffeur nomme un lieu (mairie, gare, hôtel, hôpital, aéroport…), écris le nom du lieu suivi de son adresse " +
       "si tu la connais avec certitude (ex. « Mairie d'Issy-les-Moulineaux, 62 rue du Général Leclerc, 92130 Issy-les-Moulineaux ») ; sinon le nom du lieu et la ville seulement, sans inventer de numéro.",
     messages: [
@@ -78,7 +79,7 @@ export function extractLocal(transcript, now = new Date()) {
   if (mail) out.client_email = mail[0];
 
   // Fin d'un lieu : ponctuation, ou un mot qui annonce autre chose (date, heure, distance…)
-  const STOP = String.raw`(?=[,.;!?]|\s(?:demain|après-demain|aujourd|ce soir|ce matin|cet après|le \d|lundi|mardi|mercredi|jeudi|vendredi|samedi|dimanche|à \d|a \d|vers \d|pour \d|\d{1,3}\s?(?:h\b|heures?|km|kilo|min)|il y a|apparemment|avec|ça fait|ca fait|environ|en passant|et (?:il|elle|on|ça|ca|c'est)|soit)\b|$)`;
+  const STOP = String.raw`(?=[,.;!?]|\s(?:demain|après-demain|aujourd|ce soir|ce matin|cet après|le \d|lundi|mardi|mercredi|jeudi|vendredi|samedi|dimanche|à \d|a \d|vers \d|pour \d|\d{1,3}\s?(?:h\b|heures?|km|kilo|min)|dans \d+|dans (?:un|une|deux|cinq|dix|quinze|vingt|trente)|il y a|apparemment|avec|ça fait|ca fait|environ|en passant|et (?:il|elle|on|ça|ca|c'est)|soit)\b|$)`;
   const ART = String.raw`(?:à\s+|au\s+|aux\s+|a\s+|en\s+|chez\s+)?`;
   const tries = [
     // « chercher Mme Leroy à la gare du Nord direction Roissy »
@@ -107,6 +108,10 @@ export function extractLocal(transcript, now = new Date()) {
   const fix = (x) => x.replace(/hors ?lit/gi, "Orly").replace(/\s+(?:et|puis)$/i, "").trim();
   out.depart = fix(out.depart);
   out.arrivee = fix(out.arrivee);
+  // « je pars d'ici », « de ma position », « là où je suis » → position GPS du téléphone
+  if (/^(?:ici|là|ma position|là où je suis|où je suis|l'endroit où je suis)$/i.test(out.depart) || (!out.depart && /\b(?:je pars d'ici|depuis ici|de ma position|depuis ma position|là où je suis|où je me trouve)\b/i.test(t))) {
+    out.depart = "MA_POSITION";
+  }
 
   // Nom sans civilité : « mon père, Jean-Michel », « le client s'appelle Martin »
   if (!out.client_nom) {
