@@ -65,3 +65,26 @@ describe("extractLocal — départ depuis ma position", () => {
     expect(extractLocal("De ma position jusqu'à la gare de Lyon", now).depart).toBe("MA_POSITION");
   });
 });
+
+describe("extractLocal — position actuelle, formulations variées", () => {
+  const cas = [
+    "Je suis ici, on va à Montreuil",
+    "Je pars de là pour aller à Montreuil",
+    "Depuis ma position actuelle jusqu'à Montreuil",
+    "On part d'ici direction Montreuil",
+    "À partir d'où je suis jusqu'à Montreuil",
+    "Le client est avec moi, il va à Montreuil",
+    "Départ de ma localisation vers Montreuil",
+    "En partant de là où on est, direction Montreuil",
+  ];
+  for (const phrase of cas) {
+    it(`« ${phrase} »`, () => {
+      const r = extractLocal(phrase, now);
+      expect(r.depart).toBe("MA_POSITION");
+      expect(r.arrivee).toMatch(/Montreuil/);
+    });
+  }
+  it("une vraie adresse n'est pas prise pour la position", () => {
+    expect(extractLocal("De la gare de Lyon à Montreuil", now).depart).toBe("la gare de Lyon");
+  });
+});

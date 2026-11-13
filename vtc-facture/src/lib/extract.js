@@ -38,7 +38,9 @@ export async function extractWithClaude(transcript, apiKey, now = new Date()) {
       "Corrige les erreurs évidentes de transcription dans les noms de lieux (ex. « hors lit » = Orly, « roissy » = aéroport Paris-Charles-de-Gaulle). " +
       "Résous les dates relatives (« demain », « vendredi ») par rapport à la date du jour. N'invente rien : laisse vide ce qui n'est pas dit, 0 pour un nombre inconnu. " +
       "Adresses (depart, arrivee) : format postal court uniquement — « numéro + rue, code postal + ville » (ex. « 20 rue du Pré aux Saules, 93410 Vaujours »). " +
-      "Si le chauffeur part de l'endroit où il se trouve (« je pars d'ici », « de ma position », « là où je suis »), écris exactement MA_POSITION comme départ. " +
+      "Départ = position actuelle : si le chauffeur fait comprendre, quelle que soit la formulation, que la course part de l'endroit où il se trouve en ce moment " +
+      "(« je suis ici », « je pars de là », « depuis ma position actuelle », « on part d'ici », « à partir d'où je suis », « le client est avec moi », « je l'ai pris ici », etc.), " +
+      "écris exactement MA_POSITION comme départ : l'application lira alors la position GPS du téléphone. Ne le fais pas si une adresse de départ est donnée. " +
       "Jamais de quartier, département, région ni pays. Si le chauffeur nomme un lieu (mairie, gare, hôtel, hôpital, aéroport…), écris le nom du lieu suivi de son adresse " +
       "si tu la connais avec certitude (ex. « Mairie d'Issy-les-Moulineaux, 62 rue du Général Leclerc, 92130 Issy-les-Moulineaux ») ; sinon le nom du lieu et la ville seulement, sans inventer de numéro.",
     messages: [
@@ -105,11 +107,24 @@ export function extractLocal(transcript, now = new Date()) {
     const m = t.match(new RegExp(String.raw`\b(?:aller|va|direction|destination|déposer|déposé|arrivée)\s+` + ART + String.raw`(.+?)` + STOP, "i"));
     if (m) out.arrivee = m[1].trim();
   }
-  const fix = (x) => x.replace(/hors ?lit/gi, "Orly").replace(/\s+(?:et|puis)$/i, "").trim();
+  const fix = (x) => x.replace(/hors ?lit/gi, "Orly").replace(/[\s,;.]+$/, "").replace(/\s+(?:et|puis)$/i, "").trim();
   out.depart = fix(out.depart);
   out.arrivee = fix(out.arrivee);
-  // « je pars d'ici », « de ma position », « là où je suis » → position GPS du téléphone
-  if (/^(?:ici|là|ma position|là où je suis|où je suis|l'endroit où je suis)$/i.test(out.depart) || (!out.depart && /\b(?:je pars d'ici|depuis ici|de ma position|depuis ma position|là où je suis|où je me trouve)\b/i.test(t))) {
+  // Position actuelle, quelle que soit la formulation → position GPS du téléphone
+  const ICI = String.raw`(?:ici|là|ma position(?: actuelle| gps)?|notre position|ma localisation|ma géolocalisation|l'endroit où (?:je suis|on est|nous sommes|je me trouve)|(?:là )?où (?:je suis|on est|nous sommes|je me trouve|on se trouve))`;
+  const depIci = new RegExp(String.raw`^(?:l[àa] )?` + ICI + "$", "i");
+  const phraseIci = new RegExp(
+    [
+      String.raw`\b(?:je|on|nous)\s+(?:pars|part|partons|démarre|démarrons|commence|décolle)\s+(?:d'ici|de là|d'où|de ma position|depuis)`,
+      String.raw`\b(?:je suis|on est|nous sommes|je me trouve|on se trouve)\s+(?:ici|là)\b`,
+      String.raw`\b(?:depuis|à partir de|à partir d'|en partant de|en partant d'|départ)\s*` + ICI,
+      String.raw`\b(?:d'ici|de là)\s+(?:pour|vers|jusqu|à|direction)`,
+      String.raw`\bma position(?: actuelle| gps)?\b|\bposition actuelle\b|\bma localisation\b|\bd'où je suis\b`,
+      String.raw`\b(?:le client|la cliente|il|elle)\s+est\s+avec moi\b|\bje l'ai (?:pris|prise|récupéré|récupérée) ici\b`,
+    ].join("|"),
+    "i"
+  );
+  if (depIci.test(out.depart) || (!out.depart && phraseIci.test(t)) || (/^(?:ici|là)\b/i.test(out.depart) && out.depart.length < 12)) {
     out.depart = "MA_POSITION";
   }
 
