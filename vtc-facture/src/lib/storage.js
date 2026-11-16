@@ -130,3 +130,7 @@ export async function loadAudio(id) {
     return null;
   }
 }
+
+// ── Sauvegarde / restauration ────────────────────────────────────────────────
+export const loadCounters = () => read(K.counters, {});
+export const saveCounters = (c) => write(K.counters, c);

@@ -1,9 +1,11 @@
-import { useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import NewCourse from "./components/NewCourse.jsx";
 import CourseList from "./components/CourseList.jsx";
 import CourseDetail from "./components/CourseDetail.jsx";
 import Settings from "./components/Settings.jsx";
 import Onboarding from "./components/Onboarding.jsx";
+import BackupChoice from "./components/BackupChoice.jsx";
+import { syncDrive } from "./lib/sync.js";
 import { APP_NAME } from "./lib/edition.js";
 import { loadCourses, loadSettings, saveCourses, saveSettings } from "./lib/storage.js";
 
@@ -23,6 +25,27 @@ export default function App() {
     setCourses(list);
     saveCourses(list);
   };
+  // Sauvegarde Drive automatique, quelques secondes après chaque changement.
+  const [syncState, setSyncState] = useState(null); // null | "pending" | "error"
+  const first = useRef(true);
+  useEffect(() => {
+    const b = settings.backup || {};
+    if (first.current) { first.current = false; return; }
+    if (b.mode !== "drive" || b.auto === false || !b.clientId || !b.connected) return;
+    const t = setTimeout(async () => {
+      try {
+        const r = await syncDrive(settings, courses);
+        const n = { ...settings, backup: { ...settings.backup, folderId: r.folder.id, folderLink: r.folder.webViewLink, folderShown: r.folder.name, last: r.date } };
+        setSettings(n);
+        saveSettings(n);
+        setSyncState(null);
+      } catch (e) {
+        setSyncState(e.code === 401 ? "pending" : "error");
+      }
+    }, 4000);
+    return () => clearTimeout(t);
+  }, [courses]); // eslint-disable-line react-hooks/exhaustive-deps
+
   const open = courses.find((c) => c.id === openId);
   const go = (t) => {
     setTab(t);
@@ -40,8 +63,23 @@ export default function App() {
     );
   }
 
+  if (settings.backup === undefined) {
+    return (
+      <div className="app">
+        <main>
+          <BackupChoice onChoose={(mode) => { const n = { ...settings, backup: mode ? { mode, auto: true, folderName: "VTC Facture" } : null }; setSettings(n); saveSettings(n); if (mode === "drive") { setTab("settings"); } window.scrollTo(0, 0); }} />
+        </main>
+      </div>
+    );
+  }
+
   return (
     <div className="app">
+      {syncState && (
+        <button className="sync-banner no-print" onClick={() => go("settings")}>
+          {syncState === "pending" ? "Sauvegarde Drive en attente — touchez pour vous reconnecter" : "Sauvegarde Drive impossible pour le moment (réseau ?)"}
+        </button>
+      )}
       <header className="topbar no-print">
         <div className="brand"><span className="brand-mark">◆</span> {settings.entreprise.marque || settings.entreprise.chauffeur || APP_NAME}</div>
       </header>

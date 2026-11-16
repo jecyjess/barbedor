@@ -261,3 +261,14 @@ label { display: flex; flex-direction: column; gap: 6px; font-size: 13px; color:
 .signed { margin-top: 14px; padding-top: 10px; border-top: 1px dashed #d5d2ca; font-size: 11px; color: #55575e; }
 .sig-img { display: block; max-width: 220px; max-height: 90px; margin: 4px 0; }
 .badge.s { background: rgba(95, 207, 154, 0.14); color: var(--ok); }
+
+/* Sauvegarde */
+.choice-btn { display: flex; flex-direction: column; align-items: flex-start; gap: 6px; text-align: left; padding: 14px; border-radius: 14px; border: 1px solid var(--line); background: var(--bg2); color: var(--text); font: 500 15px var(--font); cursor: pointer; }
+.choice-btn.rec { border-color: rgba(201, 169, 110, 0.5); background: rgba(201, 169, 110, 0.06); }
+.choice-btn small { color: var(--muted); font-weight: 400; font-size: 13px; line-height: 1.45; }
+.pill { font-size: 11px; padding: 2px 8px; border-radius: 99px; background: var(--gold); color: #1b160d; margin-left: 6px; }
+.row.wrap { flex-wrap: wrap; }
+.row.wrap > .btn { flex: 1 1 auto; }
+.seg > button { flex: 1; }
+.sync-banner { display: block; width: 100%; margin-top: 10px; padding: 10px 14px; border-radius: 12px; border: 1px solid rgba(240, 180, 90, 0.4); background: rgba(240, 180, 90, 0.1); color: var(--warn); font: 500 13px var(--font); text-align: left; cursor: pointer; }
+.hint a { color: var(--gold2); }

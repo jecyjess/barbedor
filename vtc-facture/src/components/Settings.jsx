@@ -1,6 +1,7 @@
 import { useState } from "react";
 import { DEFAULT_TARIFS } from "../lib/pricing.js";
 import { IS_SC } from "../lib/edition.js";
+import BackupSettings from "./BackupSettings.jsx";
 
 function Field({ label, children, hint }) {
   return (
@@ -146,6 +147,8 @@ export default function Settings({ settings, onSave }) {
         <small className="muted">Les clés restent uniquement sur ce téléphone.</small>
       </section>
       )}
+
+      <BackupSettings settings={s} onChange={(n) => { setS(n); onSave(n); }} />
 
       <section className="card">
         <div className="card-title">Approche</div>
