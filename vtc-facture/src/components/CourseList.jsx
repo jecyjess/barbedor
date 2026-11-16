@@ -44,6 +44,7 @@ export default function CourseList({ courses, onOpen }) {
               <div className="cl-side">
                 <div className="cl-price">{euro(p.ttc)}</div>
                 <span className={`badge ${c.facture ? "f" : "d"}`}>{c.facture ? c.facture.numero : c.devis.numero}</span>
+                {!c.facture && c.devis.signature && <span className="badge s">signé ✓</span>}
               </div>
             </li>
           );

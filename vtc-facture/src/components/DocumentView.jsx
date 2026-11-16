@@ -104,7 +104,15 @@ export default function DocumentView({ course, settings, type }) {
             incluse. Au-delà de {q.seuilMinutesSup} min de trajet, chaque minute supplémentaire sera facturée {euro(q.prixMinuteSup)} TTC.
           </p>}
           <p>Devis gratuit. {q.tauxTva > 0 ? `Prix TTC, TVA ${q.tauxTva} % incluse.` : "TVA non applicable, art. 293 B du CGI."}</p>
-          <div className="sign">Bon pour accord — date et signature du client :</div>
+          {course.devis.signature ? (
+            <div className="signed">
+              <div className="doc-label">Bon pour accord</div>
+              <img src={course.devis.signature.image} alt="Signature du client" className="sig-img" />
+              <div>Signé par <b>{course.devis.signature.nom}</b>, le {fmtDateTime(course.devis.signature.date)} — signature électronique sur l'appareil du chauffeur.</div>
+            </div>
+          ) : (
+            <div className="sign">Bon pour accord — date et signature du client :</div>
+          )}
         </section>
       )}
 
@@ -116,7 +124,7 @@ export default function DocumentView({ course, settings, type }) {
             </p>
           )}
           {!course.facture.paiement && <p>Paiement à réception de la facture{e.iban ? ` — IBAN : ${e.iban}` : ""}.</p>}
-          <p>Devis de référence : {course.devis.numero}.</p>
+          <p>Devis de référence : {course.devis.numero}{course.devis.signature ? `, accepté et signé le ${fmtDate(course.devis.signature.date)}` : ""}.</p>
         </section>
       )}
 

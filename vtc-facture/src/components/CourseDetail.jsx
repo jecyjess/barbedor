@@ -1,5 +1,6 @@
 import { useEffect, useState } from "react";
 import DocumentView, { documentSummary } from "./DocumentView.jsx";
+import SignaturePad from "./SignaturePad.jsx";
 import { computePrice, euro } from "../lib/pricing.js";
 import { loadAudio, nextNumber } from "../lib/storage.js";
 
@@ -9,6 +10,7 @@ export default function CourseDetail({ course, settings, onUpdate, onDelete, onB
   const [tab, setTab] = useState(course.facture ? "facture" : "devis");
   const [audioUrl, setAudioUrl] = useState(null);
   const [showFact, setShowFact] = useState(false);
+  const [signing, setSigning] = useState(false);
   const [duree, setDuree] = useState(course.devis.price.dureeEstimeeMin);
   const [paiement, setPaiement] = useState("carte bancaire");
   const [prixFinal, setPrixFinal] = useState(course.prixFinal ?? "");
@@ -95,6 +97,25 @@ export default function CourseDetail({ course, settings, onUpdate, onDelete, onB
       </div>
 
       <div className="doc-wrap"><DocumentView course={course} settings={settings} type={tab} /></div>
+
+      {tab === "devis" && !course.devis.signature && !course.facture && (
+        <button className="btn gold wide big no-print" onClick={() => setSigning(true)}>Faire signer le client</button>
+      )}
+      {tab === "devis" && course.devis.signature && (
+        <div className="toast ok no-print">Devis signé par {course.devis.signature.nom} ✓</div>
+      )}
+      {signing && (
+        <SignaturePad
+          nom={course.client.nom}
+          numero={course.devis.numero}
+          total={course.devis.price.ttc}
+          onCancel={() => setSigning(false)}
+          onSign={(sig) => {
+            onUpdate({ ...course, devis: { ...course.devis, signature: sig } });
+            setSigning(false);
+          }}
+        />
+      )}
 
       <div className="actions no-print">
         <button className="btn primary" onClick={print}>PDF / Imprimer</button>
