@@ -13,6 +13,8 @@ export const DEFAULT_TARIFS = {
   prixMinuteSup: 0.3, // minute au-delà de la durée estimée + tolérance
   toleranceMin: 5,
   supplements: { orly: 10, cdg: 5, beauvais: 15 },
+  approchePct: 50, // part des km d'approche facturée
+  approcheAlerteKm: 10, // alerte quand le rendez-vous est plus loin que ça
 };
 
 export const AIRPORTS = {
@@ -66,6 +68,8 @@ export function computePrice({
   supplementTemps = null, // { minutes, prixMinute?, montant? } — validé par le chauffeur
   prixFinal = null, // prix convenu avec le client (hors temps supplémentaire)
   forfait = null, // prix forfaitaire TTC : remplace tout le calcul au kilomètre
+  approcheKm = 0, // km à vide jusqu'au lieu de prise en charge
+  approcheMode = "non", // "non" | "facturee" | "offerte"
   tarifs = DEFAULT_TARIFS,
 }) {
   const t = { ...DEFAULT_TARIFS, ...tarifs, supplements: { ...DEFAULT_TARIFS.supplements, ...(tarifs?.supplements || {}) } };
@@ -90,6 +94,18 @@ export function computePrice({
       amount: round2(km * prixKm),
     });
 
+    // Approche : km à vide jusqu'au client, facturés à un pourcentage du prix au km.
+    const appKm = Math.max(0, Number(approcheKm) || 0);
+    let appAmount = 0;
+    if ((approcheMode === "facturee" || approcheMode === "offerte") && appKm > 0) {
+      appAmount = round2(((appKm * t.approchePct) / 100) * prixKm);
+      lines.push({
+        code: "approche",
+        label: `Approche ${appKm.toLocaleString("fr-FR", { maximumFractionDigits: 1 })} km (facturée à ${t.approchePct} %)`,
+        amount: appAmount,
+      });
+    }
+
     const base = lines.reduce((s, l) => s + l.amount, 0);
     reason = majorationReason(date, t);
     if (reason && t.majorationPct) {
@@ -103,6 +119,12 @@ export function computePrice({
     for (const a of detectAirports(depart, arrivee)) {
       const amount = Number(t.supplements[a]) || 0;
       if (amount) lines.push({ code: `apt_${a}`, label: `Supplément aéroport ${AIRPORTS[a].label}`, amount: round2(amount) });
+    }
+
+    if (approcheMode === "offerte" && appAmount > 0) {
+      // On montre l'approche puis on la déduit (avec sa part de majoration) : geste commercial visible.
+      const part = reason && t.majorationPct ? appAmount * (1 + t.majorationPct / 100) : appAmount;
+      lines.push({ code: "approche_off", label: "Approche offerte", amount: -round2(part) });
     }
 
     course = round2(lines.reduce((s, l) => s + l.amount, 0));

@@ -88,3 +88,17 @@ describe("extractLocal — position actuelle, formulations variées", () => {
     expect(extractLocal("De la gare de Lyon à Montreuil", now).depart).toBe("la gare de Lyon");
   });
 });
+
+describe("extractLocal — approche", () => {
+  it("« avec l'approche, je viens de Versailles »", () => {
+    const r = extractLocal("Madame Blanc de la gare du Nord à Roissy demain 6h, avec l'approche, je viens de Versailles", now);
+    expect(r.approche).toBe("facturee");
+    expect(r.approche_depuis).toBe("Versailles");
+  });
+  it("« approche offerte »", () => {
+    expect(extractLocal("De Bobigny à Paris, approche offerte", now).approche).toBe("offerte");
+  });
+  it("pas d'approche si on n'en parle pas", () => {
+    expect(extractLocal("De Bobigny à Paris demain 9h", now).approche).toBe("non");
+  });
+});

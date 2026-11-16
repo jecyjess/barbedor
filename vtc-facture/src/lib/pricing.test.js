@@ -100,3 +100,30 @@ describe("forfait", () => {
     expect(computePrice({ distanceKm: 0, durationMin: 0, date: jour, forfait: 60, supplementTemps: { minutes: 10 } }).ttc).toBe(63);
   });
 });
+
+describe("approche", () => {
+  const base = { distanceKm: 10, durationMin: 20, date: jour }; // 5 + 15 = 20 €
+  it("non comptée par défaut", () => {
+    expect(computePrice({ ...base, approcheKm: 60 }).ttc).toBe(20);
+  });
+  it("facturée à 50 % : 60 km → 30 km × 1,50 = 45 €", () => {
+    const p = computePrice({ ...base, approcheKm: 60, approcheMode: "facturee" });
+    expect(p.lines.find((l) => l.code === "approche")).toMatchObject({ label: "Approche 60 km (facturée à 50 %)", amount: 45 });
+    expect(p.ttc).toBe(65);
+  });
+  it("majorée la nuit et au tarif promo", () => {
+    expect(computePrice({ ...base, date: nuit, approcheKm: 20, approcheMode: "facturee" }).ttc).toBe(42); // (5+15+15) × 1,2
+    expect(computePrice({ ...base, promo: true, approcheKm: 20, approcheMode: "facturee" }).ttc).toBe(31); // 5 + 13 + 13
+  });
+  it("offerte : affichée puis déduite, majoration comprise", () => {
+    const p = computePrice({ ...base, date: nuit, approcheKm: 20, approcheMode: "offerte" });
+    expect(p.lines.find((l) => l.code === "approche_off").amount).toBe(-18);
+    expect(p.ttc).toBe(24); // comme sans approche : 20 × 1,2
+  });
+  it("comprise dans un forfait, remise avec un prix convenu", () => {
+    expect(computePrice({ ...base, approcheKm: 60, approcheMode: "facturee", forfait: 50 }).ttc).toBe(50);
+    const p = computePrice({ ...base, approcheKm: 60, approcheMode: "facturee", prixFinal: 55 });
+    expect(p.prixCalcule).toBe(65);
+    expect(p.ttc).toBe(55);
+  });
+});

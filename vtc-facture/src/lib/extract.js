@@ -15,10 +15,12 @@ const SCHEMA = {
     bagages: { type: "integer" },
     distance_km: { type: "number", description: "Distance si elle est dite (km), sinon 0" },
     duree_min: { type: "integer", description: "Durée du trajet si elle est dite (minutes), sinon 0" },
+    approche: { type: "string", enum: ["non", "facturee", "offerte"], description: "« facturee » si le chauffeur demande de compter l'approche (trajet à vide jusqu'au client), « offerte » s'il l'offre, sinon « non »" },
+    approche_depuis: { type: "string", description: "Point de départ de l'approche s'il est dit (« je viens de Vaujours », « approche depuis le bureau » → « bureau », « depuis ma position » → « MA_POSITION »), sinon vide" },
     prix_final: { type: "number", description: "Prix total convenu avec le client si le chauffeur l'annonce (ex. « ça fera 50 euros »), sinon 0" },
     notes: { type: "string", description: "Autres informations utiles (numéro de vol, siège enfant, etc.)" },
   },
-  required: ["client_nom", "client_telephone", "client_email", "depart", "arrivee", "date", "heure", "passagers", "bagages", "distance_km", "duree_min", "prix_final", "notes"],
+  required: ["client_nom", "client_telephone", "client_email", "depart", "arrivee", "date", "heure", "passagers", "bagages", "distance_km", "duree_min", "prix_final", "approche", "approche_depuis", "notes"],
   additionalProperties: false,
 };
 
@@ -70,7 +72,7 @@ const JOURS = ["dimanche", "lundi", "mardi", "mercredi", "jeudi", "vendredi", "s
 /** Analyse locale, sans IA : repère les tournures les plus courantes. */
 export function extractLocal(transcript, now = new Date()) {
   const t = " " + transcript.replace(/\s+/g, " ") + " ";
-  const out = { client_nom: "", client_telephone: "", client_email: "", depart: "", arrivee: "", date: "", heure: "", passagers: 0, bagages: 0, distance_km: 0, duree_min: 0, prix_final: 0, notes: "" };
+  const out = { client_nom: "", client_telephone: "", client_email: "", depart: "", arrivee: "", date: "", heure: "", passagers: 0, bagages: 0, distance_km: 0, duree_min: 0, prix_final: 0, approche: "non", approche_depuis: "", notes: "" };
 
   const nom = t.match(/\b(monsieur|madame|mademoiselle|m\.|mme)\s+([A-ZÀ-Ý][\wÀ-ÿ'-]+(?:\s+[A-ZÀ-Ý][\wÀ-ÿ'-]+)?)/i);
   if (nom) out.client_nom = `${nom[1][0].toUpperCase()}${nom[1].slice(1).toLowerCase()} ${nom[2].replace(/\s+(?:de|du|des|d|à|a|au|aux|pour|et|le|la)$/i, "")}`;
@@ -139,6 +141,13 @@ export function extractLocal(transcript, now = new Date()) {
 
   const km = t.match(/\b(\d{1,4}(?:[.,]\d)?)\s?(?:km|kilomètres?|kilos?)\b/i);
   if (km) out.distance_km = Number(km[1].replace(",", "."));
+  // Approche : « avec l'approche », « compte l'approche », « approche offerte »
+  if (/\bapproche\s+(?:est\s+)?offerte\b|\boffr\w*\s+l'approche\b/i.test(t)) out.approche = "offerte";
+  else if (/\b(?:avec|compte[rz]?|ajoute[rz]?|factur\w*|inclu\w*|mets?|mettre|prends?|prendre)\s+(?:aussi\s+)?(?:l'|en compte l')?approche\b|\bapproche\s+(?:comprise|incluse|factur\w*)\b|\butilise[rz]?\s+(?:aussi\s+)?l'approche\b/i.test(t)) out.approche = "facturee";
+  const dep = t.match(/\b(?:approche\s+depuis|je viens de|je viens d'|je suis à|je suis au|je pars du bureau)\s*(.+?)(?=[,.;!?]|\s(?:pour|et|donc|alors|avec)\b|$)/i);
+  if (dep) out.approche_depuis = /bureau/i.test(dep[0]) ? "bureau" : dep[1].trim();
+  else if (/\bdepuis le bureau\b/i.test(t) && /approche/i.test(t)) out.approche_depuis = "bureau";
+
   const prix = [...t.matchAll(/\b(\d{1,4}(?:[.,]\d{1,2})?)\s?(?:€|euros?)\b/gi)].at(-1);
   if (prix) out.prix_final = Number(prix[1].replace(",", "."));
   const mn = t.match(/\b(\d{1,3})\s?(?:minutes?|min|mn)\b/i);

@@ -87,7 +87,16 @@ async function nominatim(q) {
   return (await r.json())[0] || null;
 }
 
+const geoCache = new Map(); // évite de rechercher deux fois la même adresse (trajet + approche)
+
 async function geocode(q) {
+  if (geoCache.has(q)) return geoCache.get(q);
+  const res = await geocodeUncached(q);
+  geoCache.set(q, res);
+  return res;
+}
+
+async function geocodeUncached(q) {
   const tries = geocodeCandidates(q);
   for (let i = 0; i < tries.length; i++) {
     if (i) await wait(1100); // OpenStreetMap demande au plus une recherche par seconde

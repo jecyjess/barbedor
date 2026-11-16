@@ -30,6 +30,8 @@ export default function CourseDetail({ course, settings, onUpdate, onDelete, onB
     dureeReelleMin: duree,
     prixFinal: course.forfait ? null : prixFinal,
     forfait: course.forfait || null,
+    approcheKm: course.approche?.km || 0,
+    approcheMode: course.approche?.mode || "non",
     tarifs: settings.tarifs,
   };
   const proposal = computePrice(priceArgs).minutesSupProposees;

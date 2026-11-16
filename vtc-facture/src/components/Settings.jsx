@@ -148,6 +148,17 @@ export default function Settings({ settings, onSave }) {
       )}
 
       <section className="card">
+        <div className="card-title">Approche</div>
+        <Field label="Adresse du bureau (point de départ par défaut)" hint="Utilisée pour les courses réservées à plus d'une heure. Reste sur ce téléphone.">
+          <input value={s.adresseBase || ""} onChange={(e) => setS({ ...s, adresseBase: e.target.value })} placeholder="ex. 12 rue Exemple, 93410 Vaujours" />
+        </Field>
+        <div className="row">
+          <Field label="Part des km facturée (%)">{num(s.tarifs.approchePct ?? 50, tar("approchePct"), "5")}</Field>
+          <Field label="Alerte au-delà de (km)">{num(s.tarifs.approcheAlerteKm ?? 10, tar("approcheAlerteKm"), "1")}</Field>
+        </div>
+      </section>
+
+      <section className="card">
         <div className="card-title">Position GPS</div>
         <label className="switch">
           <input type="checkbox" checked={s.gps !== false} onChange={(e) => setS({ ...s, gps: e.target.checked })} />

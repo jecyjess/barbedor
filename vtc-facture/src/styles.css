@@ -237,3 +237,14 @@ label { display: flex; flex-direction: column; gap: 6px; font-size: 13px; color:
 .locate { flex: none; width: 46px; height: 46px; border-radius: 12px; border: 1px solid var(--line); background: var(--bg2); color: var(--gold2); display: grid; place-items: center; cursor: pointer; }
 .locate.busy { animation: pulse-loc 1s ease-in-out infinite; }
 @keyframes pulse-loc { 50% { opacity: 0.4; } }
+
+/* Approche */
+.approche { display: flex; flex-direction: column; gap: 10px; padding: 12px; border-radius: 12px; border: 1px solid var(--line); background: rgba(255,255,255,0.015); }
+.approche-head { display: flex; justify-content: space-between; align-items: center; gap: 10px; font-size: 14px; font-weight: 500; }
+.approche-info { font-size: 13px; color: var(--muted); line-height: 1.45; }
+.approche-info b { color: var(--text); font-variant-numeric: tabular-nums; }
+.approche-info.alert { color: var(--warn); }
+.approche-info.alert b { color: var(--warn); }
+.approche-row { align-items: flex-end; }
+.approche-row .seg { flex: 0 1 auto; }
+.seg.small button { padding: 7px 10px; font-size: 13px; }

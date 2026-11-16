@@ -14,7 +14,7 @@ function defaults() {
 const EMPTY = () => ({
   nom: "", telephone: "", email: "", adresse: "",
   depart: "", arrivee: "", ...defaults(),
-  passagers: 1, bagages: 0, notes: "", promo: false, prixFinal: "", forfaitOn: false, forfait: "",
+  passagers: 1, bagages: 0, notes: "", promo: false, prixFinal: "", forfaitOn: false, forfait: "", approcheMode: "non", approcheSrc: null, approcheDepuis: "",
 });
 
 function AddressInput({ value, onChange, placeholder, googleKey, icon, onLocate, locating }) {
@@ -53,6 +53,15 @@ function AddressInput({ value, onChange, placeholder, googleKey, icon, onLocate,
   );
 }
 
+/** « je viens de Versailles » → adresse dite ; « bureau » / « ma position » → bouton correspondant. */
+function approcheDite(v, s) {
+  const x = (v || "").trim();
+  if (!x || /^\d+\s?(?:km|kilo)/i.test(x)) return {};
+  if (/^(?:MA_POSITION|ici|là|ma position)/i.test(x)) return { approcheSrc: "gps", approcheDepuis: "" };
+  if (/bureau|domicile|maison|chez moi/i.test(x)) return { approcheSrc: "bureau", approcheDepuis: "" };
+  return { approcheDepuis: x, approcheSrc: null, ...(s ? {} : {}) };
+}
+
 export default function NewCourse({ settings, onCreated }) {
   const [f, setF] = useState(EMPTY);
   const [transcript, setTranscript] = useState("");
@@ -61,6 +70,7 @@ export default function NewCourse({ settings, onCreated }) {
   const [busy, setBusy] = useState("");
   const [msg, setMsg] = useState(null);
   const [pos, setPos] = useState(null); // position GPS utilisée comme départ
+  const [app, setApp] = useState(null); // approche calculée : { km, min, src, label, error }
   const gps = settings.gps !== false;
 
   async function locate() {
@@ -83,8 +93,8 @@ export default function NewCourse({ settings, onCreated }) {
   const price = useMemo(
     () =>
       route &&
-      computePrice({ distanceKm: route.distanceKm, durationMin: route.durationMin, date: datetime, depart: f.depart, arrivee: f.arrivee, promo: f.promo, prixFinal: f.prixFinal, forfait: f.forfaitOn ? f.forfait : null, tarifs: settings.tarifs }),
-    [route, datetime, f.depart, f.arrivee, f.promo, f.prixFinal, f.forfaitOn, f.forfait, settings.tarifs]
+      computePrice({ distanceKm: route.distanceKm, durationMin: route.durationMin, date: datetime, depart: f.depart, arrivee: f.arrivee, promo: f.promo, prixFinal: f.prixFinal, forfait: f.forfaitOn ? f.forfait : null, approcheKm: app?.km, approcheMode: f.approcheMode, tarifs: settings.tarifs }),
+    [route, datetime, f.depart, f.arrivee, f.promo, f.prixFinal, f.forfaitOn, f.forfait, app, f.approcheMode, settings.tarifs]
   );
 
   // Toute modification d'adresse invalide l'itinéraire calculé.
@@ -93,7 +103,42 @@ export default function NewCourse({ settings, onCreated }) {
   useEffect(() => {
     setRoute(dictated.current);
     dictated.current = null;
+    setApp(null);
   }, [f.depart, f.arrivee]);
+
+  /** D'où part l'approche : ce qui a été dit, sinon le choix, sinon GPS si la course est dans l'heure, sinon le bureau. */
+  function approcheSource(choice) {
+    if (choice) return choice;
+    if (f.approcheDepuis) return "dit";
+    if (f.approcheSrc) return f.approcheSrc;
+    return datetime.getTime() - Date.now() < 3600000 ? "gps" : "bureau";
+  }
+
+  async function computeApproche(choice) {
+    const src = approcheSource(choice);
+    if (!f.depart) return;
+    setBusy("approche");
+    try {
+      if (src === "gps") {
+        if (!gps) throw new Error("Position GPS désactivée dans Réglages.");
+        if (pos) {
+          setApp({ km: 0, min: 0, src, label: "votre position (vous êtes au départ)" });
+        } else {
+          const p = await getPosition();
+          const r = await computeRoute({ origin: "Ma position", destination: f.depart, date: new Date(), googleKey: settings.googleMapsKey, originPos: p });
+          setApp({ km: r.distanceKm, min: r.durationMin, src, label: "votre position" });
+        }
+      } else {
+        const from = src === "dit" ? f.approcheDepuis : settings.adresseBase;
+        if (!from) throw new Error("Adresse du bureau à renseigner dans Réglages → Approche.");
+        const r = await computeRoute({ origin: from, destination: f.depart, date: datetime, googleKey: settings.googleMapsKey });
+        setApp({ km: r.distanceKm, min: r.durationMin, src, label: src === "dit" ? from : "le bureau" });
+      }
+    } catch (e) {
+      setApp({ km: "", min: "", src, label: "", error: e.message });
+    }
+    setBusy("");
+  }
 
   async function analyse() {
     if (!transcript.trim()) return;
@@ -122,6 +167,8 @@ export default function NewCourse({ settings, onCreated }) {
       bagages: data.bagages || s.bagages,
       notes: data.notes || s.notes,
       prixFinal: data.prix_final > 0 ? String(data.prix_final) : s.prixFinal,
+      approcheMode: data.approche && data.approche !== "non" ? data.approche : s.approcheMode,
+      ...approcheDite(data.approche_depuis, s),
     }));
     setMsg({ kind: error ? "warn" : "ok", text: error ? `IA indisponible (${error}) — fiche remplie par ${engine}.` : `Fiche remplie par ${engine}. Vérifiez puis calculez le trajet.` });
     setBusy("");
@@ -146,6 +193,7 @@ export default function NewCourse({ settings, onCreated }) {
       manual();
     }
     setBusy("");
+    await computeApproche();
   }
 
   function manual() {
@@ -169,6 +217,7 @@ export default function NewCourse({ settings, onCreated }) {
       passagers: +f.passagers || 0, bagages: +f.bagages || 0, notes: f.notes,
       promo: f.promo, prixFinal: !f.forfaitOn && Number(f.prixFinal) > 0 ? Number(f.prixFinal) : null,
       forfait: f.forfaitOn && Number(f.forfait) > 0 ? Number(f.forfait) : null, transcript, audioId,
+      approche: app && !app.error ? { mode: f.approcheMode, km: Number(app.km) || 0, min: Number(app.min) || 0, depuis: app.label } : null,
       route: { ...route, distanceKm: Number(route.distanceKm) || 0, durationMin: Math.round(Number(route.durationMin) || 0), source: route.source || "saisie manuelle" },
       devis: { numero: nextNumber("D", settings.entreprise.prefixe), date: now, price },
       facture: null,
@@ -177,6 +226,7 @@ export default function NewCourse({ settings, onCreated }) {
     setTranscript("");
     setAudio(null);
     setRoute(null);
+    setApp(null);
     setMsg(null);
   }
 
@@ -251,6 +301,43 @@ export default function NewCourse({ settings, onCreated }) {
             Le prix suit la distance. La durée sert au devis et au calcul du dépassement :
             au-delà de {price.seuilMinutesSup} min, {euro(price.prixMinuteSup)} par minute (modifiable en fin de course).
             {route.source ? ` Source : ${route.source}.` : ""}
+          </div>
+
+          <div className="approche">
+            <div className="approche-head">
+              <span>Approche</span>
+              {f.forfaitOn ? (
+                <small className="muted">comprise dans le forfait</small>
+              ) : (
+                <div className="seg small">
+                  {[["non", "Non"], ["facturee", "Facturée"], ["offerte", "Offerte"]].map(([v, l]) => (
+                    <button key={v} className={f.approcheMode === v ? "on" : ""} onClick={() => setF((s) => ({ ...s, approcheMode: v }))}>{l}</button>
+                  ))}
+                </div>
+              )}
+            </div>
+            {busy === "approche" && <div className="hint">Calcul de l'approche…</div>}
+            {app?.error && <div className="hint warn">{app.error}</div>}
+            {app && !app.error && busy !== "approche" && (
+              <div className={`approche-info ${Number(app.km) > (settings.tarifs.approcheAlerteKm ?? 10) ? "alert" : ""}`}>
+                {Number(app.km) > (settings.tarifs.approcheAlerteKm ?? 10) && "⚠ "}
+                Depuis {app.label} : <b>{app.km} km</b> · arrivée sur place ≈ <b>{app.min} min</b>
+                {Number(app.km) > (settings.tarifs.approcheAlerteKm ?? 10) && f.approcheMode === "non" && !f.forfaitOn && <> — pensez à compter l'approche</>}
+              </div>
+            )}
+            <div className="row approche-row">
+              <div className="seg small">
+                {[["bureau", "Bureau"], ["gps", "Ma position"], ...(f.approcheDepuis ? [["dit", f.approcheDepuis.slice(0, 14)]] : [])].map(([v, l]) => (
+                  <button key={v} className={app?.src === v ? "on" : ""} disabled={busy === "approche"}
+                    onClick={() => { setF((s) => ({ ...s, approcheSrc: v === "dit" ? null : v, approcheDepuis: v === "dit" ? s.approcheDepuis : "" })); computeApproche(v); }}>{l}</button>
+                ))}
+              </div>
+              {f.approcheMode !== "non" && !f.forfaitOn && (
+                <label>Km d'approche
+                  <input type="number" inputMode="decimal" step="0.1" min="0" value={app?.km ?? ""} onChange={(e) => setApp((a) => ({ ...(a || { min: "", src: "", label: "saisie" }), km: e.target.value, error: null }))} />
+                </label>
+              )}
+            </div>
           </div>
 
           {!f.forfaitOn && (
