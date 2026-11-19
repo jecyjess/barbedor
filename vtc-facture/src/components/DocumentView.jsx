@@ -43,6 +43,8 @@ export default function DocumentView({ course, settings, type }) {
           <h1>{isFacture ? "Facture" : "Devis"}</h1>
           <div className="doc-num">N° {numero}</div>
           <div>Émis le {fmtDate(dateDoc)}</div>
+          {!isFacture && course.devis.baseNumero && <div>Avenant au devis {course.devis.baseNumero}</div>}
+          {!isFacture && course.devis.modifie && <div>Modifié le {fmtDate(course.devis.modifie)}</div>}
           {!isFacture && <div>Valable jusqu'au {fmtDate(validite)}</div>}
         </div>
       </header>

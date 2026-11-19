@@ -1,6 +1,7 @@
 import { useEffect, useState } from "react";
 import DocumentView, { documentSummary } from "./DocumentView.jsx";
 import SignaturePad from "./SignaturePad.jsx";
+import EditDevis from "./EditDevis.jsx";
 import { computePrice, euro } from "../lib/pricing.js";
 import { loadAudio, nextNumber } from "../lib/storage.js";
 
@@ -11,6 +12,7 @@ export default function CourseDetail({ course, settings, onUpdate, onDelete, onB
   const [audioUrl, setAudioUrl] = useState(null);
   const [showFact, setShowFact] = useState(false);
   const [signing, setSigning] = useState(false);
+  const [editing, setEditing] = useState(false);
   const [duree, setDuree] = useState(course.devis.price.dureeEstimeeMin);
   const [paiement, setPaiement] = useState("carte bancaire");
   const [prixFinal, setPrixFinal] = useState(course.prixFinal ?? "");
@@ -86,6 +88,17 @@ export default function CourseDetail({ course, settings, onUpdate, onDelete, onB
   }
   const phone = (course.client.telephone || "").replace(/[^\d+]/g, "").replace(/^0/, "33").replace(/^\+/, "");
 
+  if (editing) {
+    return (
+      <EditDevis
+        course={course}
+        settings={settings}
+        onCancel={() => setEditing(false)}
+        onSave={(c) => { onUpdate(c); setEditing(false); setTab("devis"); window.scrollTo(0, 0); }}
+      />
+    );
+  }
+
   return (
     <div className="screen">
       <div className="detail-head no-print">
@@ -98,6 +111,9 @@ export default function CourseDetail({ course, settings, onUpdate, onDelete, onB
 
       <div className="doc-wrap"><DocumentView course={course} settings={settings} type={tab} /></div>
 
+      {tab === "devis" && !course.facture && (
+        <button className="btn wide no-print" onClick={() => setEditing(true)}>Modifier le devis</button>
+      )}
       {tab === "devis" && !course.devis.signature && !course.facture && (
         <button className="btn gold wide big no-print" onClick={() => setSigning(true)}>Faire signer le client</button>
       )}

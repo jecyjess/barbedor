@@ -32,7 +32,7 @@ function docsOf(courses) {
   const list = [];
   for (const c of courses) {
     const client = (c.client?.nom || "client").replace(/[\\/:*?"<>|]/g, "").slice(0, 40);
-    list.push({ c, type: "devis", name: `${c.devis.numero} - ${client}.html`, sig: `${c.devis.price.ttc}|${c.devis.signature ? "s" : ""}` });
+    list.push({ c, type: "devis", name: `${c.devis.numero} - ${client}.html`, sig: `${c.devis.price.ttc}|${c.devis.signature ? "s" : ""}|${c.devis.modifie || ""}` });
     if (c.facture) list.push({ c, type: "facture", name: `${c.facture.numero} - ${client}.html`, sig: `${c.facture.price.ttc}|${c.facture.paiement || ""}` });
   }
   return list;
